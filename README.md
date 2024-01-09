@@ -3,9 +3,11 @@ A WIP expansion mod for Lethal Company, currently featuring a new late-game moon
 
 This is a __very__ basic release of this mod to get some content out and generate interest. I have several ideas for the future to make this mod a truly unique addition to everyone's modlist. This is an ambitious project, so development will take some time.
 
-__If you encounter any issues, please report them on GitHub and I'll address them when I can.__
+__If you encounter any issues, please report them on GitHub or the Lethal Company Modding Discord server and I'll address them when I can.__
 
 # New Moon: Auralis
+>DESIGNATION: 42-Auralis
+
 >RISK LEVEL: SSS
 
 >POPULATION: ???
@@ -38,3 +40,13 @@ Auralis is slightly more expensive than Titan, to account for the distance and p
 * Environment clutter (grass, props, etc.)
 * Ambience
 * Custom dungeon flow
+
+## Credits
+* Sickhead Games
+  * Sci-Fi Construction Kit (Modular)
+* NatureManufacture
+  * Dynamic Nature - Mountain Tree Pack
+  * Ice World
+  * Landscape Ground Pack 2
+* Hexagon
+  * Sci Fi Lamp Posts
