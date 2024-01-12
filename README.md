@@ -20,6 +20,8 @@ __If you encounter any issues, please report them on GitHub or the Lethal Compan
 
 >POSSIBLE WEATHER: Mild, Stormy, Foggy, Eclipsed
 
+>ROUTING COST: 800
+
 A frigid new moon featuring a lengthy trek to the dungeon, high enemy power limits, valuable scrap, and a treacherous fire exit path.
 
 Auralis is slightly more expensive than Titan, to account for the distance and power limits, and should generally be regarded as more dangerous. There's a high probability of Forest Keepers, and there's not much cover (yet) between the facility and the ship.
@@ -37,6 +39,7 @@ Auralis is slightly more expensive than Titan, to account for the distance and p
 
 ### Planned Updates For Auralis
 * Additional exterior buildings
+* Additional fire exits
 * Environment clutter (grass, props, etc.)
 * Ambience
 * Custom dungeon flow

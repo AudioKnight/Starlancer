@@ -1,5 +1,11 @@
+- 0.1.4
+  - Adjusted scrap spawn rates on Auralis and removed certain low-value scrap (don't worry, duckies _can_ still spawn, just very rarely). It should be much more profitable now on average.
+  - Performance optimizations.
+  - Small adjustment to interior enemy spawn rates.
+  - Very small adjustment to dungeon size.
+
 - 0.1.3
-  - Performance optimization.
+  - Performance optimizations.
   - Fixed an issue where walking into the lake wouldn't trigger water effects.
   - The path to the fire exit is now shorter.
   - Fog adjustment.
@@ -19,3 +25,4 @@
 
 - 0.1.0  
   - Initial Release.
+  - Added custom moon "Auralis".
