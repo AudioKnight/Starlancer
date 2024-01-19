@@ -1,4 +1,7 @@
-- Starlancer Moons 0.2.0
+- 0.3.0
+  - Added StarlancerMusic to the Starlancer modpack.
+
+- 0.2.0
   - Auralis is now part of "Starlancer Moons" and bundled into the "Starlancer" modpack. I'll be releasing some custom music in a couple of days as a separate mod. This way everyone has the choice of what Starlancer content they'd like to use.
   - Starlancer Moons is now dependent on "Lethal Expansion Core" instead of "Lethal Expansion", since LE's author is looking to step down from modding for the time being.
   - Completely reworked the terrain down to the intended playable area. This should improve performance, but please let me know.

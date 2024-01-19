@@ -1,14 +1,19 @@
 # Starlancer
 A modpack containing all of my Starlancer mods.
 
-A WIP expansion mod for Lethal Company, currently featuring a new late-game moon, with new mechanics planned for the future!
+A WIP expansion mod for Lethal Company, currently featuring a new late-game moon and custom music, with new mechanics planned for the future!
 
-# New Moon: Auralis
+Moons: https://thunderstore.io/c/lethal-company/p/AudioKnight/StarlancerMoons/
+
+Music: https://thunderstore.io/c/lethal-company/p/AudioKnight/StarlancerMusic/
+
+# Starlancer Moons
+### New Moon: Auralis
 >DESIGNATION: 42-Auralis
 
->RISK LEVEL: SSS
+>RISK LEVEL: SS
 
->POPULATION: ???
+>POPULATION: Officially abandoned, but reports claim to have heard the distant creak of springs.
 
 >CONDITIONS: Perpetually overcast and soul-numbingly cold. The water here causes immediate hypothermia.
 
@@ -22,7 +27,7 @@ A WIP expansion mod for Lethal Company, currently featuring a new late-game moon
 
 A frigid new moon featuring a lengthy trek to the dungeon, high enemy power limits, valuable scrap, and a treacherous fire exit path.
 
-Auralis is slightly more expensive than Titan, to account for the distance and power limits, and should generally be regarded as more dangerous. There's a high probability of Forest Keepers, and there's not much cover (yet) between the facility and the ship.
+Auralis is slightly more expensive than Titan, to account for the distance and power limits, and should generally be regarded as more dangerous. There's a high probability of Forest Keepers and not much cover between the facility and the ship.
 
 ### Planned Features For Starlancer
 * New enemies
@@ -32,15 +37,8 @@ Auralis is slightly more expensive than Titan, to account for the distance and p
 * New map hazards
 * New moons
 * Specific objectives upon landing, with progress toward objectives generating currency.
-* Custom music _made by yours truly._
-* Custom events (may conflict with certain mods, but I'll work to make them compatible)
+* Custom events (may conflict with certain mods, but I'll try to make them compatible)
 * Lore
-
-### Planned Updates For Auralis
-* Additional fire exits
-* More environment clutter (grass, props, etc.)
-* Ambience
-* Custom dungeon flow
 
 ## Credits
 * Sickhead Games
@@ -59,3 +57,5 @@ Auralis is slightly more expensive than Titan, to account for the distance and p
   * Snowed Fence
 * NorSat Entertainment
   * Blood splatter decal package
+* AS Gaming Studio
+  * Ultimate Particle Pack
