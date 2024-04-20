@@ -1,8 +1,10 @@
 ﻿using BepInEx.Configuration;
+using DunGen;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.AI;
 using static StarlancerEnemyEscape.StarlancerEnemyEscapeBase;
+using static StarlancerAIFix.StarlancerAIFixBase;
 
 namespace EnemyEscape
 {
@@ -67,7 +69,7 @@ namespace EnemyEscape
         {
             if (enemy.isEnemyDead) { Destroy(enemy.GetComponent<StarlancerEscapeComponent>()); }
 
-            if (enemy.currentBehaviourStateIndex != 0) { lastPathAttempt += Time.deltaTime; }
+            //if (enemy.currentBehaviourStateIndex != 0) { lastPathAttempt += Time.deltaTime; }
 
             if ((Time.time - lastTeleportCheck) <= UpdateInterval) { return; }
 
@@ -78,6 +80,9 @@ namespace EnemyEscape
             {
                 if (pathingToTeleport)
                 {
+                    enemy.SetDestinationToPosition(RoundManager.Instance.GetNavMeshPosition(closestTeleportPosition));
+                    enemy.agent.SetDestination(enemy.destination);
+
                     if (enemy.GetType() == typeof(FlowermanAI)) 
                     {
                         enemy.SetDestinationToPosition(RoundManager.Instance.GetNavMeshPosition(enemy.destination));
@@ -160,7 +165,7 @@ namespace EnemyEscape
             }
             
 
-            if (enemy.isOutside && (Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport) //Run through the list of teleporter IDs to warp to the matching inside teleport.
+            if (enemy.isOutside && ((Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport)) //Run through the list of teleporter IDs to warp to the matching inside teleport.
             {
                 for (int i = 0; i < outsideTeleports.Length; i++)
                 {
@@ -448,7 +453,7 @@ namespace EnemyEscape
                     entranceNode.transform.SetParent(entranceTeleports[i].entrancePoint, false);
                     RoundManager.Instance.insideAINodes.AddItem(entranceNode);
                 }
-
+                
             }
         }
     }
