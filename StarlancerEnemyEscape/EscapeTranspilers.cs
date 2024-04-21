@@ -3,16 +3,19 @@ using GameNetcodeStuff;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using static StarlancerEnemyEscape.StarlancerEnemyEscapeBase;
+using UnityEngine.AI;
+using EnemyEscape;
+using UnityEngine;
 
 
 
 namespace EscapeTranspilers
 {
 
-    internal class EscapeTranspilersBase
+    internal class EscapeTranspilers 
     {
 
-        // Somewhere in our code we subscribe to the event once:
+        /*// Somewhere in our code we subscribe to the event once:
 
         // ...
         private static void PlayerControllerB_Jump_performed(ILContext il)
@@ -62,10 +65,38 @@ namespace EscapeTranspilers
                     self.jumpForce = 13f; // this is the default value of jumpForce
             });
             // Plugin.Logger.LogInfo(il.ToString()); // uncomment to print the modified IL code to console
+        }*/
+
+        private static void HawkScrapDestinationChanger(ILContext il)
+        {
+            IL.BaboonBirdAI.DoAIInterval += HawkScrapDestinationChanger;
+            ILCursor c = new(il);
+            c.GotoNext(
+                x => x.MatchLdarg(0),
+                x => x.MatchLdcI4(0),
+                x => x.MatchCall<EnemyAI>(nameof(EnemyAI.SetDestinationToPosition))
+                );
+            c.Emit(OpCodes.Ldarg_0);
+            c.EmitNop();
+            c.EmitDelegate<Action<EnemyAI>>((self) =>
+            {
+                logger.LogWarning("Baboon hawk is trying to carry scrap back to the nest!");
+
+                var pathToTeleport = new NavMeshPath();
+
+                foreach (EntranceTeleport teleport in StarlancerEscapeComponent.entranceTeleports)
+                {
+                    NavMesh.CalculatePath(self.transform.position, teleport.entrancePoint.transform.position, self.agent.areaMask, pathToTeleport); //Check for a valid path to this entrance.
+
+                    if (pathToTeleport.status == NavMeshPathStatus.PathComplete)
+                    {
+                        self.SetDestinationToPosition(teleport.transform.position);
+                        break;
+                    }
+
+                }
+            });
         }
     }
-
-
-
 }
 

@@ -17,9 +17,9 @@ namespace EnemyEscape
         private const int interiorPathRange = 500; //50 after test
         private const int exteriorPathRange = 500; //200 after test
 
-        private static EntranceTeleport[] entranceTeleports;
-        private static EntranceTeleport[] outsideTeleports;
-        private static EntranceTeleport[] insideTeleports;
+        internal static EntranceTeleport[] entranceTeleports;
+        internal static EntranceTeleport[] outsideTeleports;
+        internal static EntranceTeleport[] insideTeleports;
 
         private int pathRange;
         private int chanceToEscape;
