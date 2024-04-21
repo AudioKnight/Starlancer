@@ -1,10 +1,8 @@
 ﻿using BepInEx.Configuration;
-using DunGen;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.AI;
 using static StarlancerEnemyEscape.StarlancerEnemyEscapeBase;
-using static StarlancerAIFix.StarlancerAIFixBase;
 
 namespace EnemyEscape
 {

@@ -2,8 +2,9 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using EnemyEscape;
-using HarmonyLib;
+//using HarmonyLib;
 using System;
+using System.Reflection;
 
 
 namespace StarlancerEnemyEscape
@@ -49,7 +50,9 @@ namespace StarlancerEnemyEscape
                 "\nReasonableDefaults: Blob:0, Bunker Spider:10, Butler:5, Butler Bees:5, Centipede:0, Crawler:10, Flowerman:10, Hoarding bug:10, Jester:1, Nutcracker:5, Puffer:10, Spring:5, Baboon hawk:15, Earth Leviathan:0, ForestGiant:0, Manticoil:5, MouthDog:10, RadMech:0, Red Locust Bees:5" +
                 "\nDisabled: All 0s, Minimal: All 1s, Chaos: All 100s"));
 
-            harmony.PatchAll(typeof(StarlancerEscapeComponent));
+            harmony.PatchAll(typeof(StarlancerEnemyEscapeBase));
+            harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), modGUID);
+
         }
 
         internal static Dictionary<string, int> GetPresetValues(ConfigPreset preset)
