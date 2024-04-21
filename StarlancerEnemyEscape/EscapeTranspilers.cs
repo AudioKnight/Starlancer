@@ -12,10 +12,10 @@ using UnityEngine;
 namespace EscapeTranspilers
 {
 
-    internal class EscapeTranspilers 
+    internal class StarlancerEscapeTranspilers 
     {
 
-        /*// Somewhere in our code we subscribe to the event once:
+        // Somewhere in our code we subscribe to the event once:
 
         // ...
         private static void PlayerControllerB_Jump_performed(ILContext il)
@@ -65,7 +65,7 @@ namespace EscapeTranspilers
                     self.jumpForce = 13f; // this is the default value of jumpForce
             });
             // Plugin.Logger.LogInfo(il.ToString()); // uncomment to print the modified IL code to console
-        }*/
+        }
 
         private static void HawkScrapDestinationChanger(ILContext il)
         {
@@ -77,7 +77,6 @@ namespace EscapeTranspilers
                 x => x.MatchCall<EnemyAI>(nameof(EnemyAI.SetDestinationToPosition))
                 );
             c.Emit(OpCodes.Ldarg_0);
-            c.EmitPop();
             c.EmitDelegate<Action<EnemyAI>>((self) =>
             {
                 logger.LogWarning("Baboon hawk is trying to carry scrap back to the nest!");
@@ -99,4 +98,3 @@ namespace EscapeTranspilers
         }
     }
 }
-
