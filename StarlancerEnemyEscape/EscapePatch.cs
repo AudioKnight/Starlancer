@@ -21,7 +21,7 @@ namespace EnemyEscape
         internal static EntranceTeleport[] outsideTeleports;
         internal static EntranceTeleport[] insideTeleports;
 
-        private int pathRange;
+        internal int pathRange;
         private int chanceToEscape;
         private float lastTeleportCheck;
         private float lastTeleportTime;

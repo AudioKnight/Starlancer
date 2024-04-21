@@ -77,7 +77,7 @@ namespace EscapeTranspilers
                 x => x.MatchCall<EnemyAI>(nameof(EnemyAI.SetDestinationToPosition))
                 );
             c.Emit(OpCodes.Ldarg_0);
-            c.EmitNop();
+            c.EmitPop();
             c.EmitDelegate<Action<EnemyAI>>((self) =>
             {
                 logger.LogWarning("Baboon hawk is trying to carry scrap back to the nest!");

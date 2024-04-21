@@ -2,7 +2,7 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using EnemyEscape;
-//using HarmonyLib;
+using HarmonyLib;
 using System;
 using System.Reflection;
 
@@ -51,7 +51,7 @@ namespace StarlancerEnemyEscape
                 "\nDisabled: All 0s, Minimal: All 1s, Chaos: All 100s"));
 
             harmony.PatchAll(typeof(StarlancerEnemyEscapeBase));
-            harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), modGUID);
+            
 
         }
 
