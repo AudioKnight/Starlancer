@@ -51,8 +51,9 @@ namespace StarlancerEnemyEscape
 
             harmony.PatchAll(typeof(StarlancerEnemyEscapeBase));
             harmony.PatchAll(typeof(StarlancerEscapeComponent));
-            harmony.PatchAll(typeof(StarlancerEscapeTranspilers));
+            //harmony.PatchAll(typeof(StarlancerEscapeTranspilers));
             
+            //IL.BaboonBirdAI.DoAIInterval += StarlancerEscapeTranspilers.HawkScrapDestinationChanger;
 
         }
 
@@ -134,7 +135,7 @@ namespace StarlancerEnemyEscape
             { "Earth Leviathan", 0 },
             { "ForestGiant", 0 },
             { "Manticoil", 5 },
-            { "MouthDog", 10 },
+            { "MouthDog", 0 },
             { "RadMech", 0 },
             { "Red Locust Bees", 5 },
         };

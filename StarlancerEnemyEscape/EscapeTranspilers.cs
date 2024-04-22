@@ -1,11 +1,13 @@
 ﻿using HarmonyLib;
-using GameNetcodeStuff;
-using Mono.Cecil.Cil;
-using MonoMod.Cil;
+using System.Reflection;
+using System.Reflection.Emit;
 using static StarlancerEnemyEscape.StarlancerEnemyEscapeBase;
 using UnityEngine.AI;
 using EnemyEscape;
+using StarlancerAIFix;
+using StarlancerAIFix.Patches;
 using UnityEngine;
+using UnityEngine.ProBuilder.Stl;
 
 
 
@@ -14,70 +16,136 @@ namespace EscapeTranspilers
 
     internal class StarlancerEscapeTranspilers 
     {
+        [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.SetDestinationToPosition))]
+        [HarmonyTranspiler]
 
-        // Somewhere in our code we subscribe to the event once:
-
-        // ...
-        private static void PlayerControllerB_Jump_performed(ILContext il)
+        static IEnumerable<CodeInstruction> SetDestinationToPositionTranspiler(ref Vector3 __position, IEnumerable<CodeInstruction> instructions)
         {
-            IL.GameNetcodeStuff.PlayerControllerB.Jump_performed += PlayerControllerB_Jump_performed;
-            // We use ILCursor to make modifications to the il code
-            ILCursor c = new(il);
+            Vector3 position = __position;
 
-            // Find a place inside the if statement which makes us jump.
-            // We know the following C# line is inside the if statement:
-            // this.playerSlidingTimer = 0f;
-            // So we locate it from IL code:
-            c.GotoNext(
-                // IL_00af: ldarg.0         // load argument 0 'this' onto stack
-                // IL_00b0: ldc.r4 0.0      // push 0 onto the stack as float32
-                // IL_00b5: stfld float32 GameNetcodeStuff.PlayerControllerB::playerSlidingTimer // replace the value of 'playerSlidingTimer' with value from stack
-                x => x.MatchLdarg(0),
-                x => x.MatchLdcR4(0.0f),
-                // Note that nameof gives the name of a variable, type, or member as a string constant
-                // so this is the same as "playerSlidingTimer" but we can more easily change this
-                // if the game changes the name of that variable/type/member.
-                x => x.MatchStfld<PlayerControllerB>(nameof(PlayerControllerB.playerSlidingTimer))
-            // The reason we have multiple things to match is to make sure
-            // that even if the original IL code changes, we will find the
-            // exact place if it still exists. If GotoNext doesn't match everything,
-            // it will throw an exception and this code won't run.
-            // If you don't want it to throw an exception, use TryGotoNext instead.
-            );
-            // Our IL cursor is now located before the first instruction we matched against in GotoNext.
-            // The IL cursor will always be between an above and below instruction.
-            // If we want to move it, we could for example do c.Index += 3; to move it after the stfld instruction.
+            return new CodeMatcher(instructions)
+                .MatchForward(true,
+                new CodeMatch(OpCodes.Ldarg_2),
+                new CodeMatch(OpCodes.Ldsfld, typeof(BaboonBirdAI).GetField(nameof(BaboonBirdAI.baboonCampPosition))),
+                new CodeMatch(OpCodes.Ldc_I4_0))
+                .Insert(new CodeInstruction(OpCodes.Ldarg_0,
+                CodeInstruction.Call(typeof(EnemyAI), nameof(EnemyAI.SetDestinationToPosition))),
+                Transpilers.EmitDelegate<Action<EnemyAI>>((enemy) =>
+                {
+                    logger.LogWarning("SetDestinationToPositionTranspiler is trying to do something!");
 
-            // To insert our C# logic from before, we will do the following:
-            // We will emit a delegate Method of type void (Action) which
-            // takes an instance of PlayerControllerB as an argument.
-            // Because this is IL code, we have to load 'this' (PlayerControllerB) onto
-            // stack first, with ldarg.0
-            // Any non-static method has 'this' as the first argument
-            c.Emit(OpCodes.Ldarg_0); // load argument 0 'this' onto stack
-            c.EmitDelegate<Action<PlayerControllerB>>((self) =>
-            {
-                logger.LogInfo("Hello from C# code in IL!");
+                    bool nodeInOtherArea = false;
+                    NavMeshPath pathToTeleport = new NavMeshPath();
 
-                if (self.isSprinting)
-                    self.jumpForce = 30f;
-                else
-                    self.jumpForce = 13f; // this is the default value of jumpForce
-            });
-            // Plugin.Logger.LogInfo(il.ToString()); // uncomment to print the modified IL code to console
+                    if (enemy.isOutside)
+                    {
+                        foreach (Vector3 node in AIFix.outsideNodePositions)
+                        {
+                            if (Vector3.Distance(node, position) < 10)
+                            {
+                                nodeInOtherArea = false;
+                                break;
+                            }
+                            else { nodeInOtherArea = true; }
+                        }
+                        if (nodeInOtherArea)
+                        {
+                            logger.LogWarning("Target position is inside, checking for reachable teleport.");
+                            float closestTeleportDistance = float.PositiveInfinity;
+                            foreach (EntranceTeleport teleport in StarlancerEscapeComponent.insideTeleports)
+                            {
+                                NavMesh.CalculatePath(enemy.transform.position, teleport.transform.position, enemy.agent.areaMask, pathToTeleport);
+                                if (pathToTeleport.status != NavMeshPathStatus.PathComplete && Vector3.Distance(enemy.transform.position, teleport.transform.position) < closestTeleportDistance)
+                                {
+                                    position = teleport.transform.position;
+                                    logger.LogWarning($"Teleport found, changing destination to {position}.");
+                                }
+                                
+                            }
+                        }
+                    }
+                    if (!enemy.isOutside)
+                    {
+                        foreach (Vector3 node in AIFix.insideNodePositions)
+                        {
+                            if (Vector3.Distance(node, position) < 10)
+                            {
+                                nodeInOtherArea = false;
+                                break;
+                            }
+                            else { nodeInOtherArea = true; }
+                        }
+                        if (nodeInOtherArea)
+                        {
+                            logger.LogWarning("Target position is outside, checking for reachable teleport.");
+                            float closestTeleportDistance = float.PositiveInfinity;
+                            foreach (EntranceTeleport teleport in StarlancerEscapeComponent.insideTeleports)
+                            {
+                                NavMesh.CalculatePath(enemy.transform.position, teleport.transform.position, enemy.agent.areaMask, pathToTeleport);
+                                if (pathToTeleport.status != NavMeshPathStatus.PathComplete && Vector3.Distance(enemy.transform.position, teleport.transform.position) < closestTeleportDistance)
+                                {
+                                    position = teleport.transform.position;
+                                    logger.LogWarning($"Teleport found, changing destination to {position}.");
+                                }
+                                
+                            }
+                        }
+                    }
+                }))
+                         .InstructionEnumeration();
         }
 
-        private static void HawkScrapDestinationChanger(ILContext il)
+/*        static IEnumerable<CodeInstruction> HawkDestinationTranspiler(IEnumerable<CodeInstruction> instructions)
         {
-            IL.BaboonBirdAI.DoAIInterval += HawkScrapDestinationChanger;
+            return new CodeMatcher(instructions)
+                .MatchForward(true,
+                new CodeMatch(OpCodes.Ldarg_0),
+                new CodeMatch(OpCodes.Ldsfld, typeof(BaboonBirdAI).GetField(nameof(BaboonBirdAI.baboonCampPosition))),
+                new CodeMatch(OpCodes.Ldc_I4_0))
+                .Insert(new CodeInstruction(OpCodes.Ldarg_0,
+                CodeInstruction.Call(typeof(EnemyAI), nameof(EnemyAI.SetDestinationToPosition))),
+                Transpilers.EmitDelegate<Action<BaboonBirdAI>>((hawk) =>
+                {
+                    logger.LogWarning("Baboon hawk is trying to carry scrap back to the nest!");
+
+                    var pathToTeleport = new NavMeshPath();
+                    var pathToCamp = new NavMeshPath();
+                    NavMesh.CalculatePath(hawk.transform.position, BaboonBirdAI.baboonCampPosition, hawk.agent.areaMask, pathToCamp);
+                    if (pathToCamp.status != NavMeshPathStatus.PathComplete)
+                    {
+                        foreach (EntranceTeleport teleport in StarlancerEscapeComponent.entranceTeleports)
+                        {
+                            NavMesh.CalculatePath(hawk.transform.position, teleport.entrancePoint.transform.position, hawk.agent.areaMask, pathToTeleport); //Check for a valid path to this entrance.
+
+                            if (pathToTeleport.status == NavMeshPathStatus.PathComplete)
+                            {
+                                hawk.SetDestinationToPosition(teleport.transform.position);
+                                break;
+                            }
+                        }
+                    }
+                    else { hawk.SetDestinationToPosition(BaboonBirdAI.baboonCampPosition); }
+
+                }))
+                         .InstructionEnumeration();
+        }
+*/
+        /*internal static void HawkScrapDestinationChanger(ILContext il)
+        {
+
+            logger.LogInfo("Attempting to do IL shenanigans");
+            
             ILCursor c = new(il);
+            
+
             c.GotoNext(
                 x => x.MatchLdarg(0),
+                x => x.MatchLdsfld<BaboonBirdAI>(nameof(BaboonBirdAI.baboonCampPosition)),
                 x => x.MatchLdcI4(0),
                 x => x.MatchCall<EnemyAI>(nameof(EnemyAI.SetDestinationToPosition))
                 );
             c.Emit(OpCodes.Ldarg_0);
-            c.EmitDelegate<Action<EnemyAI>>((self) =>
+            c.EmitDelegate<Action<BaboonBirdAI>>((self) =>
             {
                 logger.LogWarning("Baboon hawk is trying to carry scrap back to the nest!");
 
@@ -95,6 +163,7 @@ namespace EscapeTranspilers
 
                 }
             });
-        }
+            logger.LogInfo(il);
+        }*/
     }
 }

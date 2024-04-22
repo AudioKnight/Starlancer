@@ -1,7 +1,10 @@
 ﻿using BepInEx.Configuration;
+using EscapeTranspilers;
 using HarmonyLib;
+using StarlancerAIFix.Patches;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UIElements;
 using static StarlancerEnemyEscape.StarlancerEnemyEscapeBase;
 
 namespace EnemyEscape
@@ -79,19 +82,7 @@ namespace EnemyEscape
                 if (pathingToTeleport)
                 {
                     enemy.SetDestinationToPosition(RoundManager.Instance.GetNavMeshPosition(closestTeleportPosition));
-                    enemy.agent.SetDestination(enemy.destination);
-
-                    if (enemy.GetType() == typeof(FlowermanAI)) 
-                    {
-                        enemy.SetDestinationToPosition(RoundManager.Instance.GetNavMeshPosition(enemy.destination));
-                        enemy.agent.SetDestination(enemy.destination);
-                    }
-                    else
-                    {
-                        enemy.SetDestinationToPosition(RoundManager.Instance.GetNavMeshPosition(closestTeleportPosition));
-                        enemy.agent.SetDestination(enemy.destination);
-                    }
-                    
+                    enemy.agent.SetDestination(enemy.destination);                    
                 }
                 else if (random.Next(0, 100) <= chanceToEscape) 
                 {
@@ -246,90 +237,6 @@ namespace EnemyEscape
                     }
                 }
             }
-
-
-
-            /*if (enemy.isOutside && (Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange)) //Run through the list of teleporter IDs to warp to the matching inside teleport.
-            {
-                for (int i = 0; i < outsideTeleports.Length; i++)
-                {
-                    if (Vector3.Distance(outsideTeleports[i].entrancePoint.transform.position, enemy.transform.position) <= TeleportRange)
-                    {
-                        lastTeleportTime = Time.time;
-                        prevPathDistance = float.PositiveInfinity;
-                        pathingToTeleport = false;
-                        teleportFound = false;
-                        agent.Warp(insideTeleports[i].entrancePoint.transform.position);
-                        enemy.SetEnemyOutside(false);
-                        pathRange = interiorPathRange;
-                        enemy.favoriteSpot = enemy.allAINodes[random.Next(0, enemy.allAINodes.Length - 1)].transform;
-                        enemy.DoAIInterval();
-                        randomEnemyDestination = RoundManager.Instance.GetNavMeshPosition(enemy.allAINodes[random.Next(0, enemy.allAINodes.Length - 1)].transform.position);
-                        enemy.SetDestinationToPosition(randomEnemyDestination);
-                        enemy.agent.SetDestination(randomEnemyDestination);
-
-                       //======== Search ==============
-                        if (enemy.GetType() == typeof(BaboonBirdAI))
-                        {
-                            enemy.StartSearch(enemy.transform.position, enemy.GetComponent<BaboonBirdAI>().scoutingSearchRoutine);
-                        }
-                        else if (enemy.GetType() == typeof(HoarderBugAI))
-                        {
-                            enemy.StartSearch(enemy.transform.position, enemy.GetComponent<HoarderBugAI>().searchForItems);
-                            enemy.GetComponent<HoarderBugAI>().searchForItems.unsearchedNodes = enemy.allAINodes.ToList();
-                        }
-                        else { enemy.StartSearch(enemy.transform.position); } 
-
-                        //======== Logging ============================                        
-                        logger.LogInfo($"{enemy.gameObject.name} teleported inside; Switching to interior AI. Setting Favorite Spot to {enemy.favoriteSpot}.");
-                        logger.LogInfo($"{enemy.gameObject.name} destination is {enemy.destination}.");
-                        logger.LogInfo($"{enemy.gameObject.name} navmesh destination is {agent.destination}.");
-                        logger.LogInfo($"{enemy.gameObject.name} outside status is {enemy.isOutside}.");
-                        return;
-
-                    }
-                }
-            }
-            else if (!enemy.isOutside && (Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange)) //Run through the list of teleporter IDs to warp to the matching outside teleport.
-            {
-                for (int i = 0; i < insideTeleports.Length; i++)
-                {
-                    if (Vector3.Distance(insideTeleports[i].entrancePoint.transform.position, enemy.transform.position) <= TeleportRange)
-                    {
-                        lastTeleportTime = Time.time;
-                        prevPathDistance = float.PositiveInfinity;
-                        pathingToTeleport = false;
-                        teleportFound = false;
-                        agent.Warp(outsideTeleports[i].entrancePoint.transform.position);
-                        enemy.SetEnemyOutside(true);
-                        pathRange = exteriorPathRange;
-                        enemy.favoriteSpot = enemy.allAINodes[random.Next(0, enemy.allAINodes.Length - 1)].transform;
-                        enemy.DoAIInterval();
-                        randomEnemyDestination = RoundManager.Instance.GetNavMeshPosition(enemy.allAINodes[random.Next(0, enemy.allAINodes.Length - 1)].transform.position);
-                        enemy.SetDestinationToPosition(randomEnemyDestination);
-                        enemy.agent.SetDestination(randomEnemyDestination);
-
-                        //=========== Search ============
-                        if (enemy.GetType() == typeof(BaboonBirdAI))
-                        {
-                            enemy.StartSearch(enemy.transform.position, enemy.GetComponent<BaboonBirdAI>().scoutingSearchRoutine);
-                        }
-                        else if (enemy.GetType() == typeof(HoarderBugAI))
-                        {
-                            enemy.StartSearch(enemy.transform.position, enemy.GetComponent<HoarderBugAI>().searchForItems);
-                            enemy.GetComponent<HoarderBugAI>().searchForItems.unsearchedNodes = enemy.allAINodes.ToList();
-                        }
-                        else { enemy.StartSearch(enemy.transform.position); }
-
-                        //======== Logging ============================                        
-                        logger.LogInfo($"{enemy.gameObject.name} teleported outside; Switching to exterior AI. Setting Favorite Spot to {enemy.favoriteSpot}.");
-                        logger.LogInfo($"{enemy.gameObject.name} destination is {enemy.destination}.");
-                        logger.LogInfo($"{enemy.gameObject.name} navmesh destination is {agent.destination}.");
-                        logger.LogInfo($"{enemy.gameObject.name} outside status is {enemy.isOutside}.");
-                        return;
-                    }
-                }
-            }*/
         }
 
         //====================================================================================================================================================================================
@@ -380,6 +287,9 @@ namespace EnemyEscape
 
         private static void BindRegisteredEnemies()
         {
+            
+            /*IL.BaboonBirdAI.DoAIInterval += StarlancerEscapeTranspilers.HawkScrapDestinationChanger;*/
+
             EnemyAI[] enemyAIs = Resources.FindObjectsOfTypeAll<EnemyAI>();
 
             foreach (EnemyAI enemy in enemyAIs)
@@ -399,6 +309,8 @@ namespace EnemyEscape
                     new AcceptableValueRange<int>(-1, 100)));
             }
         }
+
+        //====================================================================================================================================================================================
 
         [HarmonyPatch(typeof(RoundManager), "SetLevelObjectVariables")]
         [HarmonyPostfix]
@@ -454,6 +366,100 @@ namespace EnemyEscape
                 
             }
         }
+        //====================================================================================================================================================================================
+        [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.SetDestinationToPosition))]
+        [HarmonyPrefix]
+
+        private static void SetDestinationToPositionPrefix(EnemyAI __instance, ref Vector3 position, ref bool checkForPath)
+        {
+            logger.LogWarning("SetDestinationToPositionPrefix is trying to do something!");
+            logger.LogWarning($"Original position argument: {position}");
+            logger.LogWarning($"Original destination argument: {__instance.destination}");
+            bool destinationInOtherArea = false;
+            bool teleportFound = false;
+            NavMeshPath pathToTeleport = new NavMeshPath();
+
+            if (__instance.isOutside)
+            {
+                foreach (Vector3 node in AIFix.outsideNodePositions)
+                {
+                    if (Vector3.Distance(node, position) < 10)
+                    {
+                        destinationInOtherArea = false;
+                        break;
+                    }
+                    else { destinationInOtherArea = true; }
+                }
+                if (destinationInOtherArea)
+                {
+                    logger.LogWarning("Target position is inside, checking for reachable teleport.");
+                    float closestTeleportDistance = float.PositiveInfinity;
+                    foreach (EntranceTeleport teleport in insideTeleports)
+                    {
+                        NavMesh.CalculatePath(__instance.transform.position, teleport.transform.position, __instance.agent.areaMask, pathToTeleport);
+                        if (pathToTeleport.status != NavMeshPathStatus.PathComplete && Vector3.Distance(__instance.transform.position, teleport.transform.position) < closestTeleportDistance)
+                        {
+                            checkForPath = false;
+                            teleportFound = true;
+                            position = teleport.transform.position;
+                            __instance.destination = RoundManager.Instance.GetNavMeshPosition(position, RoundManager.Instance.navHit, -1f);
+                        }
+                    }
+                    if (teleportFound) { logger.LogWarning($"Teleport found, changing destination to {position}."); }
+                }
+            }
+            if (!__instance.isOutside)
+            {
+                foreach (Vector3 node in AIFix.insideNodePositions)
+                {
+                    if (Vector3.Distance(node, position) < 10)
+                    {
+                        destinationInOtherArea = false;
+                        break;
+                    }
+                    else { destinationInOtherArea = true; }
+                }
+                if (destinationInOtherArea)
+                {
+                    logger.LogWarning("Target position is outside, checking for reachable teleport.");
+                    float closestTeleportDistance = float.PositiveInfinity;
+                    foreach (EntranceTeleport teleport in insideTeleports)
+                    {
+                        NavMesh.CalculatePath(__instance.transform.position, teleport.transform.position, __instance.agent.areaMask, pathToTeleport);
+                        if (pathToTeleport.status != NavMeshPathStatus.PathComplete && Vector3.Distance(__instance.transform.position, teleport.transform.position) < closestTeleportDistance)
+                        {
+                            checkForPath = false;
+                            teleportFound = true;
+                            position = teleport.transform.position;
+                            __instance.destination = RoundManager.Instance.GetNavMeshPosition(position, RoundManager.Instance.navHit, -1f);
+                        }
+                    }
+                    if (teleportFound) { logger.LogWarning($"Teleport found, changing destination to {position}."); }
+                }
+            }
+            logger.LogWarning($"Final Position argument: {position}");
+            logger.LogWarning($"Final destination argument: {__instance.destination}");
+        }
+
+                        /*var corners = pathToTeleport.corners;
+                        var pathDistance = 0f;
+
+                        for (int i = 1; i<corners.Length; i++)
+                        {
+                            pathDistance += Vector3.Distance(corners[i - 1], corners[i]);
+                        }
+
+                        if (pathDistance > pathRange) { continue; } //Check if this entrance is within range.
+
+                        if (pathDistance < prevPathDistance)
+                        {
+                            teleportFound = true;
+                            prevPathDistance = pathDistance;
+                            closestTeleport = teleport;
+                            closestTeleportPosition = teleport.entrancePoint.transform.position;
+                            logger.LogInfo($"{teleport.name} is now the closest teleport.");
+                        }*/
+
     }
 }
 
