@@ -70,7 +70,7 @@ namespace EnemyEscape
         {
             if (enemy.isEnemyDead) { Destroy(enemy.GetComponent<StarlancerEscapeComponent>()); }
 
-            //if (enemy.currentBehaviourStateIndex != 0) { lastPathAttempt += Time.deltaTime; }
+            if (enemy.currentBehaviourStateIndex != 0) { lastPathAttempt += Time.deltaTime; } //Pause the cooldown if not in state 0
 
             if ((Time.time - lastTeleportCheck) <= UpdateInterval) { return; }
 
@@ -146,7 +146,7 @@ namespace EnemyEscape
             {
                 foreach (EntranceTeleport teleport in entranceTeleports)
                 {
-                    if (Vector3.Distance(enemy.transform.position, teleport.transform.position) < TeleportRange)
+                    if (Vector3.Distance(enemy.transform.position, teleport.entrancePoint.transform.position) < TeleportRange)
                     {
                         closeToTeleport = true;
                     }
@@ -196,7 +196,7 @@ namespace EnemyEscape
                     }
                 }
             }
-            else if (!enemy.isOutside && (Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport) //Run through the list of teleporter IDs to warp to the matching outside teleport.
+            else if (!enemy.isOutside /*&& (Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport*/) //Run through the list of teleporter IDs to warp to the matching outside teleport.
             {
                 for (int i = 0; i < insideTeleports.Length; i++)
                 {
@@ -374,10 +374,11 @@ namespace EnemyEscape
         {
             logger.LogWarning("SetDestinationToPositionPrefix is trying to do something!");
             logger.LogWarning($"Original position argument: {position}");
-            logger.LogWarning($"Original destination argument: {__instance.destination}");
+            logger.LogWarning($"Original destination: {__instance.destination}");
             bool destinationInOtherArea = false;
             bool teleportFound = false;
             NavMeshPath pathToTeleport = new NavMeshPath();
+            float prevPathDistance = float.PositiveInfinity;
 
             if (__instance.isOutside)
             {
@@ -393,17 +394,31 @@ namespace EnemyEscape
                 if (destinationInOtherArea)
                 {
                     logger.LogWarning("Target position is inside, checking for reachable teleport.");
-                    float closestTeleportDistance = float.PositiveInfinity;
-                    foreach (EntranceTeleport teleport in insideTeleports)
+                    //float closestTeleportDistance = float.PositiveInfinity;
+                    foreach (EntranceTeleport teleport in outsideTeleports)
                     {
-                        NavMesh.CalculatePath(__instance.transform.position, teleport.transform.position, __instance.agent.areaMask, pathToTeleport);
-                        if (pathToTeleport.status != NavMeshPathStatus.PathComplete && Vector3.Distance(__instance.transform.position, teleport.transform.position) < closestTeleportDistance)
+                        NavMesh.CalculatePath(__instance.transform.position, teleport.entrancePoint.transform.position, __instance.agent.areaMask, pathToTeleport);
+                        if (pathToTeleport.status != NavMeshPathStatus.PathComplete) { continue; }
+
+                        var corners = pathToTeleport.corners;
+                        var pathDistance = 0f;
+
+                        for (int i = 1; i < corners.Length; i++)
                         {
+                            pathDistance += Vector3.Distance(corners[i - 1], corners[i]);
+                        }
+
+                        if (pathDistance < prevPathDistance)
+                        {
+                            prevPathDistance = pathDistance;
                             checkForPath = false;
                             teleportFound = true;
-                            position = teleport.transform.position;
+                            position = teleport.entrancePoint.transform.position;
                             __instance.destination = RoundManager.Instance.GetNavMeshPosition(position, RoundManager.Instance.navHit, -1f);
                         }
+
+                            
+                        
                     }
                     if (teleportFound) { logger.LogWarning($"Teleport found, changing destination to {position}."); }
                 }
@@ -422,23 +437,33 @@ namespace EnemyEscape
                 if (destinationInOtherArea)
                 {
                     logger.LogWarning("Target position is outside, checking for reachable teleport.");
-                    float closestTeleportDistance = float.PositiveInfinity;
+                    //float closestTeleportDistance = float.PositiveInfinity;
                     foreach (EntranceTeleport teleport in insideTeleports)
                     {
-                        NavMesh.CalculatePath(__instance.transform.position, teleport.transform.position, __instance.agent.areaMask, pathToTeleport);
-                        if (pathToTeleport.status != NavMeshPathStatus.PathComplete && Vector3.Distance(__instance.transform.position, teleport.transform.position) < closestTeleportDistance)
+                        NavMesh.CalculatePath(__instance.transform.position, teleport.entrancePoint.transform.position, __instance.agent.areaMask, pathToTeleport);
+                        if (pathToTeleport.status != NavMeshPathStatus.PathComplete) { continue; }
+
+                        var corners = pathToTeleport.corners;
+                        var pathDistance = 0f;
+
+                        for (int i = 1; i < corners.Length; i++)
                         {
+                            pathDistance += Vector3.Distance(corners[i - 1], corners[i]);
+                        }
+                        if (pathDistance < prevPathDistance)
+                        {
+                            prevPathDistance = pathDistance;
                             checkForPath = false;
                             teleportFound = true;
-                            position = teleport.transform.position;
+                            position = teleport.entrancePoint.transform.position;
                             __instance.destination = RoundManager.Instance.GetNavMeshPosition(position, RoundManager.Instance.navHit, -1f);
                         }
                     }
                     if (teleportFound) { logger.LogWarning($"Teleport found, changing destination to {position}."); }
                 }
             }
-            logger.LogWarning($"Final Position argument: {position}");
-            logger.LogWarning($"Final destination argument: {__instance.destination}");
+            logger.LogWarning($"Final position argument: {position}");
+            logger.LogWarning($"Final destination: {__instance.destination}");
         }
 
                         /*var corners = pathToTeleport.corners;
