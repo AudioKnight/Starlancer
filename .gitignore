@@ -73,3 +73,6 @@ crashlytics-build.properties
 /StarlancerEnemyEscape/bin
 /StarlancerEnemyEscape/obj
 StarlancerEnemyEscape/.editorconfig
+/StarlancerAI/bin
+StarlancerAI/.editorconfig
+/StarlancerAI/obj
