@@ -1,15 +1,12 @@
 ﻿using HarmonyLib;
-using System.Reflection;
 using System.Reflection.Emit;
 using static StarlancerEnemyEscape.StarlancerEnemyEscapeBase;
 using UnityEngine.AI;
 using EnemyEscape;
-using StarlancerAIFix;
 using StarlancerAIFix.Patches;
 using UnityEngine;
-using UnityEngine.ProBuilder.Stl;
 
-
+//======================================================================= UNUSED IN CURRENT VERSION OF ENEMYESCAPE =======================================================================
 
 namespace EscapeTranspilers
 {

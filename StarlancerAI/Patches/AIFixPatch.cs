@@ -84,12 +84,8 @@ namespace StarlancerAIFix.Patches
                 for (int i = 0; i < outsideAINodes.Length; i++)
                 {
                     outsideNodePositions[i] = outsideAINodes[i].transform.position;
-                    logger.LogInfo($"Logging position of {outsideAINodes[i]}: {outsideNodePositions[i]}");
                 }
-                
-                
             }
-            if (outsideAINodes != null) { logger.LogInfo("Out of 'if': outsideAINodes is not null!"); }
             return outsideAINodes;
         }
 
@@ -122,18 +118,18 @@ namespace StarlancerAIFix.Patches
             Vector3 closestOutsideNode = Vector3.positiveInfinity;
             Vector3 closestInsideNode = Vector3.positiveInfinity;
 
-            for (int i = 0; i < outsideAINodes.Length; i++)
+            for (int i = 0; i < outsideNodePositions.Length; i++)
             {
-                if ((outsideAINodes[i].transform.position - enemyPos).sqrMagnitude < (closestOutsideNode - enemyPos).sqrMagnitude)
+                if ((outsideNodePositions[i] - enemyPos).sqrMagnitude < (closestOutsideNode - enemyPos).sqrMagnitude)
                 {
-                    closestOutsideNode = outsideAINodes[i].transform.position;
+                    closestOutsideNode = outsideNodePositions[i];
                 }
             }
             for (int i = 0; i < insideAINodes.Length; i++)
             {
-                if ((insideAINodes[i].transform.position - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude)
+                if ((insideNodePositions[i] - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude)
                 {
-                    closestInsideNode = insideAINodes[i].transform.position;
+                    closestInsideNode = insideNodePositions[i];
                 }
             }
 
