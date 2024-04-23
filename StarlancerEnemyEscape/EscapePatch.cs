@@ -48,9 +48,6 @@ namespace EnemyEscape
 
         private void Awake()
         {
-            interiorPathRange = configEscapeInteriorRange[enemy.enemyType.enemyName].Value;
-            exteriorPathRange = configEscapeExteriorRange[enemy.enemyType.enemyName].Value;
-            pathCooldownTime = configEscapeCooldownTime[enemy.enemyType.enemyName].Value;
             enemy = GetComponent<EnemyAI>();
             pathToTeleport = new NavMeshPath();
             lastTeleportCheck = Time.time;
@@ -59,6 +56,9 @@ namespace EnemyEscape
             closestTeleportPosition = Vector3.negativeInfinity;
             prevPathDistance = float.PositiveInfinity;
             random = new Random(StartOfRound.Instance.randomMapSeed);
+            interiorPathRange = configEscapeInteriorRange[enemy.enemyType.enemyName].Value;
+            exteriorPathRange = configEscapeExteriorRange[enemy.enemyType.enemyName].Value;
+            pathCooldownTime = configEscapeCooldownTime[enemy.enemyType.enemyName].Value;
 
             if (EnemyEscapeConfigDictionary[enemy.enemyType.enemyName].Value == -1)
             {
@@ -314,7 +314,7 @@ namespace EnemyEscape
                     configEscapeInteriorRange[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", intPathRangeDefault,
                         new ConfigDescription($"Range at which {__instance.enemyType.enemyName} can detect a teleport while inside.",
                         new AcceptableValueRange<int>(10, 9999)));
-                    configEscapeCooldownTime[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", cooldownTimeDefault,
+                    configEscapeCooldownTime[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Cooldown Time", cooldownTimeDefault,
                         new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {__instance.enemyType.enemyName}.",
                         new AcceptableValueRange<int>(10, 9999)));
                 }
@@ -331,7 +331,7 @@ namespace EnemyEscape
                     configEscapeInteriorRange[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", intPathRangeDefault,
                         new ConfigDescription($"Range at which {__instance.enemyType.enemyName} can detect a teleport while inside.",
                         new AcceptableValueRange<int>(10, 9999)));
-                    configEscapeCooldownTime[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod  Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", cooldownTimeDefault,
+                    configEscapeCooldownTime[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Cooldown Time", cooldownTimeDefault,
                         new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {__instance.enemyType.enemyName}.",
                         new AcceptableValueRange<int>(10, 9999)));
                 }
@@ -379,7 +379,7 @@ namespace EnemyEscape
                     configEscapeInteriorRange[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", intPathRangeDefault,
                         new ConfigDescription($"Range at which {enemy.enemyType.enemyName} can detect a teleport while inside.",
                         new AcceptableValueRange<int>(10, 9999)));
-                    configEscapeCooldownTime[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla  Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", cooldownTimeDefault,
+                    configEscapeCooldownTime[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Cooldown Time", cooldownTimeDefault,
                         new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {enemy.enemyType.enemyName}.",
                         new AcceptableValueRange<int>(10, 9999)));
                     continue;
@@ -394,7 +394,7 @@ namespace EnemyEscape
                 configEscapeInteriorRange[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", intPathRangeDefault,
                     new ConfigDescription($"Range at which {enemy.enemyType.enemyName} can detect a teleport while inside.",
                     new AcceptableValueRange<int>(10, 9999)));
-                configEscapeCooldownTime[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod  Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", cooldownTimeDefault,
+                configEscapeCooldownTime[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Cooldown Time", cooldownTimeDefault,
                         new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {enemy.enemyType.enemyName}.",
                         new AcceptableValueRange<int>(10, 9999)));
             }
