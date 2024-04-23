@@ -2,7 +2,6 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using EnemyEscape;
-using EscapeTranspilers;
 using HarmonyLib;
 
 
@@ -14,7 +13,7 @@ namespace StarlancerEnemyEscape
     {
         private const string modGUID = "AudioKnight.StarlancerEnemyEscape";
         private const string modName = "Starlancer EnemyEscape";
-        private const string modVersion = "1.0.0";
+        private const string modVersion = "2.0.0";
 
         private readonly Harmony harmony = new Harmony(modGUID);
         public static StarlancerEnemyEscapeBase Instance;
@@ -33,6 +32,9 @@ namespace StarlancerEnemyEscape
         public static ConfigEntry<ConfigPreset> configEscapePreset;
 
         internal static Dictionary<string, ConfigEntry<int>> EnemyEscapeConfigDictionary = new Dictionary<string, ConfigEntry<int>>();
+        internal static Dictionary<string, ConfigEntry<int>> configEscapeInteriorRange = new Dictionary<string, ConfigEntry<int>>();
+        internal static Dictionary<string, ConfigEntry<int>> configEscapeExteriorRange = new Dictionary<string, ConfigEntry<int>>();
+        internal static Dictionary<string, ConfigEntry<int>> configEscapeCooldownTime = new Dictionary<string, ConfigEntry<int>>();
         
         private void Awake()
         {
@@ -40,20 +42,19 @@ namespace StarlancerEnemyEscape
             {
                 Instance = this;
             }
+
             EnemyEscapeConfig = Config;
             logger = Logger;
 
             logger.LogInfo("Starlancer is allowing enemies to roam.");
 
             configEscapePreset = Config.Bind("EnemyEscape", "EscapePreset", ConfigPreset.ReasonableDefaults, new ConfigDescription("Which preset to use. If an enemy has a value manually set below, it will take priority." +
-                "\nReasonableDefaults: Blob:0, Bunker Spider:10, Butler:5, Butler Bees:5, Centipede:0, Crawler:10, Flowerman:10, Hoarding bug:10, Jester:1, Nutcracker:5, Puffer:10, Spring:5, Baboon hawk:15, Earth Leviathan:0, ForestGiant:0, Manticoil:5, MouthDog:10, RadMech:0, Red Locust Bees:5" +
-                "\nDisabled: All 0s, Minimal: All 1s, Chaos: All 100s"));
+                "\nReasonableDefaults: Blob:0, Bunker Spider:10, Butler:5, Butler Bees:5, Centipede:0, Crawler:10, Flowerman:10, Hoarding bug:10, Jester:1, Nutcracker:5, Puffer:10, Spring:5, Baboon hawk:15, Earth Leviathan:0, ForestGiant:0, MouthDog:0, RadMech:0, Red Locust Bees:5" +
+                "\nDisabled: All 0s, Minimal: All 1s, Chaos: All 100s (Use at your own risk)"));
 
             harmony.PatchAll(typeof(StarlancerEnemyEscapeBase));
             harmony.PatchAll(typeof(StarlancerEscapeComponent));
             //harmony.PatchAll(typeof(StarlancerEscapeTranspilers));
-            
-            //IL.BaboonBirdAI.DoAIInterval += StarlancerEscapeTranspilers.HawkScrapDestinationChanger;
 
         }
 
@@ -90,9 +91,10 @@ namespace StarlancerEnemyEscape
 
         internal static Dictionary<string, string> EnemyWhitelist = new Dictionary<string, string>  {
             { "Girl", "Unneeded"},
-            { "Docile Locust Bees", "Unneeded"},
             { "Masked", "Unneeded"},
             { "Tulip Snake", "Unneeded"},
+            { "Docile Locust Bees", "Unneeded"},
+            { "Manticoil", "Unneeded"},
             { "Lasso", "Unimplemented"},
             { "Red pill", "Unimplemented"},
         };
@@ -112,7 +114,6 @@ namespace StarlancerEnemyEscape
             { "Baboon hawk", "" },
             { "Earth Leviathan", "" },
             { "ForestGiant", "" },
-            { "Manticoil", "" },
             { "MouthDog", "" },
             { "RadMech", "" },
             { "Red Locust Bees", "" },
@@ -134,7 +135,6 @@ namespace StarlancerEnemyEscape
             { "Baboon hawk", 15 },
             { "Earth Leviathan", 0 },
             { "ForestGiant", 0 },
-            { "Manticoil", 5 },
             { "MouthDog", 0 },
             { "RadMech", 0 },
             { "Red Locust Bees", 5 },
@@ -155,7 +155,6 @@ namespace StarlancerEnemyEscape
             { "Baboon hawk", 0 },
             { "Earth Leviathan", 0 },
             { "ForestGiant", 0 },
-            { "Manticoil", 0 },
             { "MouthDog", 0 },
             { "RadMech", 0 },
             { "Red Locust Bees", 0 },
@@ -176,7 +175,6 @@ namespace StarlancerEnemyEscape
             { "Baboon hawk", 1 },
             { "Earth Leviathan", 1 },
             { "ForestGiant", 1 },
-            { "Manticoil", 1 },
             { "MouthDog", 1 },
             { "RadMech", 1 },
             { "Red Locust Bees", 1 },
@@ -197,7 +195,6 @@ namespace StarlancerEnemyEscape
             { "Baboon hawk", 100 },
             { "Earth Leviathan", 100 },
             { "ForestGiant", 100 },
-            { "Manticoil", 100 },
             { "MouthDog", 100 },
             { "RadMech", 100 },
             { "Red Locust Bees", 100 },

@@ -1,10 +1,10 @@
 ﻿using BepInEx.Configuration;
 using HarmonyLib;
-using StarlancerAIFix.Patches;
 using UnityEngine;
 using UnityEngine.AI;
 using static StarlancerAIFix.Patches.AIFix;
 using static StarlancerEnemyEscape.StarlancerEnemyEscapeBase;
+using Random = System.Random;
 
 namespace EnemyEscape
 {
@@ -14,19 +14,19 @@ namespace EnemyEscape
         private const float TeleportCooldownTime = 5;
         private const float TeleportRange = 1;
 
+        private const int intPathRangeDefault = 20;
+        private const int extPathRangeDefault = 200;
+        private const int cooldownTimeDefault = 30;
+
         internal static EntranceTeleport[] entranceTeleports;
         internal static EntranceTeleport[] outsideTeleports;
         internal static EntranceTeleport[] insideTeleports;
 
-        internal int chanceToEscape; //Config per enemy, -1 (preset) - 100
-        internal int interiorPathRange = 20; //20 default, config range 10 - 9999
-        internal int exteriorPathRange = 200; //200 default, config range 50 - 9999
-        internal float PathCooldownTime = 60; //60 default, config int range 30 - 300 (Half a minute to 5 minutes)
+        internal int chanceToEscape;    //Config per enemy, [-1(preset) - 100]
+        internal int interiorPathRange; //20 default, config range [10 - 9999]
+        internal int exteriorPathRange; //200 default, config range [50 - 9999]
+        internal int pathCooldownTime;  //30 default, config int range [10 - 300] (10 seconds up to 5 minutes)
 
-        private EnemyAI enemy;
-        private System.Random random;
-        private NavMeshPath pathToTeleport;
-        private EntranceTeleport closestTeleport;
         private bool pathingToTeleport;
         private bool teleportFound;
         private bool closeToTeleport;
@@ -35,15 +35,22 @@ namespace EnemyEscape
         private float lastTeleportTime;
         private float lastPathAttempt;
         private float prevPathDistance;
-
         private Vector3 closestTeleportPosition;
         private Vector3 randomEnemyDestination;
+        private Random random;
+        private EnemyAI enemy;
+        private NavMeshPath pathToTeleport;
+        private EntranceTeleport closestTeleport;
         private Transform insideFavoriteSpot;
         private Transform outsideFavoriteSpot;
 
+        //====================================================================================================================================================================================
 
         private void Awake()
         {
+            interiorPathRange = configEscapeInteriorRange[enemy.enemyType.enemyName].Value;
+            exteriorPathRange = configEscapeExteriorRange[enemy.enemyType.enemyName].Value;
+            pathCooldownTime = configEscapeCooldownTime[enemy.enemyType.enemyName].Value;
             enemy = GetComponent<EnemyAI>();
             pathToTeleport = new NavMeshPath();
             lastTeleportCheck = Time.time;
@@ -51,7 +58,7 @@ namespace EnemyEscape
             lastPathAttempt = Time.time;
             closestTeleportPosition = Vector3.negativeInfinity;
             prevPathDistance = float.PositiveInfinity;
-            random = new System.Random(StartOfRound.Instance.randomMapSeed);
+            random = new Random(StartOfRound.Instance.randomMapSeed);
 
             if (EnemyEscapeConfigDictionary[enemy.enemyType.enemyName].Value == -1)
             {
@@ -86,34 +93,32 @@ namespace EnemyEscape
             if ((Time.time - lastTeleportCheck) <= UpdateInterval) { return; }
 
             lastTeleportCheck = Time.time;
-            logger.LogInfo($"Update check. PathCooldownTime remaining = {PathCooldownTime - (Time.time - lastPathAttempt)}. PathingToTeleport is {pathingToTeleport}. ");
+            //logger.LogInfo($"Update check. PathCooldownTime remaining = {PathCooldownTime - (Time.time - lastPathAttempt)}. PathingToTeleport is {pathingToTeleport}. ");
 
-            if ((Time.time - lastPathAttempt) > PathCooldownTime || pathingToTeleport) //Attempt to path to a nearby entrance.
+            if ((Time.time - lastPathAttempt) > pathCooldownTime || pathingToTeleport) //Attempt to path to a nearby entrance.
             {
                 //=========== EnemyType Specific ============
-                if (enemy.GetType() == typeof(HoarderBugAI))
+                
+                if (enemy.GetType() == typeof(FlowermanAI)) //The Bracken doesn't want to path to an entrance when it's alone in the facility. Until or unless I transpile its DoAIInterval(), I'd rather the random pathing not eat up CPU.
                 {
-                    if (enemy.GetComponent<HoarderBugAI>().heldItem != null) { return; }
+                    return;
                 }
-                else if (enemy.GetType() == typeof(FlowermanAI) )
+                else if (enemy.GetType() == typeof(HoarderBugAI)) //Prevents random pathing when a lootbug is holding an item so it doesn't get confused.
                 {
-                    bool playerInArea = false;
-                    for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
+                    if (enemy.GetComponent<HoarderBugAI>().heldItem != null) 
                     {
-                        if (StartOfRound.Instance.allPlayerScripts[i].isPlayerControlled && StartOfRound.Instance.allPlayerScripts[i].isInsideFactory)
-                        {
-                            playerInArea = true;
-                            break;
-                        }
+                        enemy.SetDestinationToPosition(enemy.GetComponent<HoarderBugAI>().nestPosition);
+                        lastPathAttempt += Time.deltaTime;
+                        return; 
                     }
-                    if (!playerInArea) { logger.LogInfo("Bracken !playerInArea"); enemy.SwitchToBehaviourState(1); }
                 }
 
+                //===========================================
 
-                    if (pathingToTeleport)
+                if (pathingToTeleport)
                 {
-                    enemy.SetDestinationToPosition(RoundManager.Instance.GetNavMeshPosition(closestTeleportPosition));
-                    enemy.agent.SetDestination(enemy.destination);                    
+                    enemy.SetDestinationToPosition(closestTeleportPosition);
+                    enemy.agent.SetDestination(closestTeleportPosition);                    
                 }
                 else if (random.Next(0, 100) <= chanceToEscape) 
                 {
@@ -144,9 +149,9 @@ namespace EnemyEscape
                     if (teleportFound)
                     {
                         pathingToTeleport = true;
-                        logger.LogInfo($"{enemy.enemyType.name} is pathing to {closestTeleportPosition}.");
-                        enemy.SetDestinationToPosition(RoundManager.Instance.GetNavMeshPosition(closestTeleportPosition));
-                        enemy.agent.SetDestination(enemy.destination);
+                        //logger.LogInfo($"{enemy.enemyType.name} is pathing to {closestTeleportPosition}.");
+                        enemy.SetDestinationToPosition(closestTeleportPosition);
+                        enemy.agent.SetDestination(closestTeleportPosition);
                     }
                 }
                 lastPathAttempt = Time.time;
@@ -219,11 +224,13 @@ namespace EnemyEscape
                         }
                         else { enemy.StartSearch(enemy.transform.position); }
 
+                        //===========================================
+
                         return;
                     }
                 }
             }
-            else if (!enemy.isOutside /*&& (Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport*/) //Run through the list of teleporter IDs to warp to the matching outside teleport.
+            else if (!enemy.isOutside && (Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport) //Run through the list of teleporter IDs to warp to the matching outside teleport.
             {
                 for (int i = 0; i < insideTeleports.Length; i++)
                 {
@@ -260,6 +267,8 @@ namespace EnemyEscape
                         }
                         else { enemy.StartSearch(enemy.transform.position); }
 
+                        //===========================================
+
                         return;
                     }
                 }
@@ -275,7 +284,7 @@ namespace EnemyEscape
             prevPathDistance = float.PositiveInfinity;
             pathingToTeleport = false;
             teleportFound = false;
-            randomEnemyDestination = RoundManager.Instance.GetNavMeshPosition(enemy.allAINodes[random.Next(0, enemy.allAINodes.Length - 1)].transform.position);
+            randomEnemyDestination = enemy.allAINodes[random.Next(0, enemy.allAINodes.Length - 1)].transform.position;
             enemy.SetDestinationToPosition(randomEnemyDestination);
             enemy.agent.SetDestination(randomEnemyDestination);
             enemy.DoAIInterval();
@@ -290,25 +299,45 @@ namespace EnemyEscape
         {
             if (EnemyWhitelist.ContainsKey(__instance.enemyType.enemyName)) { return; }
 
-            if (!EnemyEscapeConfigDictionary.ContainsKey(__instance.enemyType.enemyName))
+            if (!EnemyEscapeConfigDictionary.ContainsKey(__instance.enemyType.enemyName)) //Secondary config binding in case the GNM patch doesn't catch something.
             {
+                //Vanilla Enemy Binding
                 if (VanillaEnemyList.ContainsKey(__instance.enemyType.enemyName))
                 {
                     logger.LogInfo($"Adding {__instance.enemyType.enemyName} to the StarlancerEnemyEscape config.");
-                    EnemyEscapeConfigDictionary[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("[^0-9A-Za-z _-]", "")}", -1,
+                    EnemyEscapeConfigDictionary[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")}", -1,
                         new ConfigDescription($"Chance for {__instance.enemyType.enemyName} to go into or out of the facility. Set to -1 to use the value from the chosen preset.",
-                        new AcceptableValueRange<int>(-1, 100)));
+                        new AcceptableValueRange<int>(-1, 100)));logger.LogInfo($"Adding {__instance.enemyType.enemyName} to the StarlancerEnemyEscape config.");
+                    configEscapeExteriorRange[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Exterior Range", extPathRangeDefault,
+                        new ConfigDescription($"Range at which {__instance.enemyType.enemyName} can detect a teleport while outside.",
+                        new AcceptableValueRange<int>(20, 9999)));
+                    configEscapeInteriorRange[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", intPathRangeDefault,
+                        new ConfigDescription($"Range at which {__instance.enemyType.enemyName} can detect a teleport while inside.",
+                        new AcceptableValueRange<int>(10, 9999)));
+                    configEscapeCooldownTime[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", cooldownTimeDefault,
+                        new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {__instance.enemyType.enemyName}.",
+                        new AcceptableValueRange<int>(10, 9999)));
                 }
                 else
+                //Mod Enemy Binding
                 {
                     logger.LogInfo($"Adding {__instance.enemyType.enemyName} to the StarlancerEnemyEscape config.");
-                    EnemyEscapeConfigDictionary[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{__instance.enemyType.enemyName.Replace("[^0-9A-Za-z _-]", "")}", -1,
+                    EnemyEscapeConfigDictionary[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")}", -1,
                         new ConfigDescription($"Chance for {__instance.enemyType.enemyName} to go into or out of the facility. Set to -1 to use the value from the chosen preset.",
-                        new AcceptableValueRange<int>(-1, 100)));
+                        new AcceptableValueRange<int>(20, 100)));
+                    configEscapeExteriorRange[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Exterior Range", extPathRangeDefault,
+                        new ConfigDescription($"Range at which {__instance.enemyType.enemyName} can detect a teleport while outside.",
+                        new AcceptableValueRange<int>(20, 9999)));
+                    configEscapeInteriorRange[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", intPathRangeDefault,
+                        new ConfigDescription($"Range at which {__instance.enemyType.enemyName} can detect a teleport while inside.",
+                        new AcceptableValueRange<int>(10, 9999)));
+                    configEscapeCooldownTime[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod  Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", cooldownTimeDefault,
+                        new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {__instance.enemyType.enemyName}.",
+                        new AcceptableValueRange<int>(10, 9999)));
                 }
-                
             }
-            if (__instance.gameObject.GetComponent<StarlancerEscapeComponent>() == null)
+
+            if (__instance.gameObject.GetComponent<StarlancerEscapeComponent>() == null) //Add the Escape Component, then remove it if chanceToEscape == 0.
             {
                 StarlancerEscapeComponent EscapeComponent = __instance.gameObject.AddComponent<StarlancerEscapeComponent>();
                 logger.LogInfo($"Adding EscapeComponent to {__instance.gameObject.name}. It may now roam freely.");
@@ -330,25 +359,44 @@ namespace EnemyEscape
         private static void BindRegisteredEnemies()
         {
             
-            /*IL.BaboonBirdAI.DoAIInterval += StarlancerEscapeTranspilers.HawkScrapDestinationChanger;*/
-
             EnemyAI[] enemyAIs = Resources.FindObjectsOfTypeAll<EnemyAI>();
 
             foreach (EnemyAI enemy in enemyAIs)
             {
                 if (EnemyWhitelist.ContainsKey(enemy.enemyType.enemyName)) { continue; }
                 if (EnemyEscapeConfigDictionary.ContainsKey(enemy.enemyType.enemyName)) { continue; }
+
+                //Vanilla Enemy Binding
                 if (VanillaEnemyList.ContainsKey(enemy.enemyType.enemyName))
                 {
-                    EnemyEscapeConfigDictionary[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{enemy.enemyType.enemyName.Replace("[^0-9A-Za-z _-]", "")}", -1,
+                    
+                    EnemyEscapeConfigDictionary[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")}", -1,
                         new ConfigDescription($"Chance for {enemy.enemyType.enemyName} to go into or out of the facility. Set to -1 to use the value from the chosen preset.",
                         new AcceptableValueRange<int>(-1, 100)));
+                    configEscapeExteriorRange[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Exterior Range", extPathRangeDefault,
+                        new ConfigDescription($"Range at which {enemy.enemyType.enemyName} can detect a teleport while outside.",
+                        new AcceptableValueRange<int>(20, 9999)));
+                    configEscapeInteriorRange[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", intPathRangeDefault,
+                        new ConfigDescription($"Range at which {enemy.enemyType.enemyName} can detect a teleport while inside.",
+                        new AcceptableValueRange<int>(10, 9999)));
+                    configEscapeCooldownTime[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla  Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", cooldownTimeDefault,
+                        new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {enemy.enemyType.enemyName}.",
+                        new AcceptableValueRange<int>(10, 9999)));
                     continue;
                 }
                 //Mod Enemy Binding
-                EnemyEscapeConfigDictionary[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{enemy.enemyType.enemyName.Replace("[^0-9A-Za-z _-]", "")}", -1,
+                EnemyEscapeConfigDictionary[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")}", -1,
                     new ConfigDescription($"Chance for {enemy.enemyType.enemyName} to go into or out of the facility. Set to -1 to use the value from the chosen preset.",
                     new AcceptableValueRange<int>(-1, 100)));
+                configEscapeExteriorRange[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Exterior Range", extPathRangeDefault,
+                        new ConfigDescription($"Range at which {enemy.enemyType.enemyName} can detect a teleport while outside.",
+                        new AcceptableValueRange<int>(20, 9999)));
+                configEscapeInteriorRange[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", intPathRangeDefault,
+                    new ConfigDescription($"Range at which {enemy.enemyType.enemyName} can detect a teleport while inside.",
+                    new AcceptableValueRange<int>(10, 9999)));
+                configEscapeCooldownTime[enemy.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod  Enemies", $"{enemy.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")} Interior Range", cooldownTimeDefault,
+                        new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {enemy.enemyType.enemyName}.",
+                        new AcceptableValueRange<int>(10, 9999)));
             }
         }
 
@@ -357,9 +405,9 @@ namespace EnemyEscape
         [HarmonyPatch(typeof(RoundManager), "SetLevelObjectVariables")]
         [HarmonyPostfix]
 
-        private static void EntranceAINodes()
+        private static void EntranceTeleportsAndAINodes()
         {
-            if (entranceTeleports == null || entranceTeleports.Length == 0 || entranceTeleports[0] == null)
+            if (entranceTeleports == null || entranceTeleports.Length == 0 || entranceTeleports[0] == null) //Find all EntranceTeleports
             {
                 entranceTeleports = FindObjectsOfType<EntranceTeleport>();
                 outsideTeleports = new EntranceTeleport[entranceTeleports.Length / 2];
@@ -381,7 +429,7 @@ namespace EnemyEscape
                 }
             }
 
-            for (int i = 0; i < entranceTeleports.Length; i++)
+            for (int i = 0; i < entranceTeleports.Length; i++) //Instantiate AI and SpawnDenial nodes at each EntranceTeleport
             {
                 if (entranceTeleports[i].isEntranceToBuilding)
                 {
@@ -408,7 +456,9 @@ namespace EnemyEscape
                 
             }
         }
+
         //====================================================================================================================================================================================
+        
         [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.SetDestinationToPosition))]
         [HarmonyPrefix]
 
@@ -448,7 +498,7 @@ namespace EnemyEscape
                             prevPathDistance = pathDistance;
                             checkForPath = false;
                             position = teleport.entrancePoint.transform.position;
-                            __instance.destination = RoundManager.Instance.GetNavMeshPosition(position, RoundManager.Instance.navHit, -1f);
+                            __instance.SetDestinationToPosition(position);
                         }
                     }
                 }
@@ -483,7 +533,7 @@ namespace EnemyEscape
                             prevPathDistance = pathDistance;
                             checkForPath = false;
                             position = teleport.entrancePoint.transform.position;
-                            __instance.destination = RoundManager.Instance.GetNavMeshPosition(position, RoundManager.Instance.navHit, -1f);
+                            __instance.SetDestinationToPosition(position);
                         }
                     }
                 }
