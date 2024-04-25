@@ -298,7 +298,7 @@ namespace EnemyEscape
 
         private static void EscapeSetup(EnemyAI __instance)
         {
-            if (EnemyWhitelist.ContainsKey(__instance.enemyType.enemyName)) { return; }
+            if (EnemyBlacklist.ContainsKey(__instance.enemyType.enemyName)) { return; }
 
             if (!EnemyEscapeConfigDictionary.ContainsKey(__instance.enemyType.enemyName)) //Secondary config binding in case the GNM patch doesn't catch something.
             {
@@ -371,7 +371,7 @@ namespace EnemyEscape
             foreach (EnemyAI enemy in enemyAIs)
             {
                 if (enemy == null || enemy.enemyType == null || enemy.enemyType.enemyName == null) { continue; }
-                if (EnemyWhitelist.ContainsKey(enemy.enemyType.enemyName)) { continue; }
+                if (EnemyBlacklist.ContainsKey(enemy.enemyType.enemyName)) { continue; }
                 if (EnemyEscapeConfigDictionary.ContainsKey(enemy.enemyType.enemyName)) { continue; }
 
                 //Vanilla Enemy Binding
@@ -472,80 +472,84 @@ namespace EnemyEscape
 
         private static void SetDestinationToPositionPrefix(EnemyAI __instance, ref Vector3 position, ref bool checkForPath)
         {
-            bool destinationInOtherArea = false;
-            NavMeshPath pathToTeleport = new NavMeshPath();
-            float prevPathDistance = float.PositiveInfinity;
-
-            if (__instance.isOutside)
+            if (__instance.GetComponent<StarlancerEscapeComponent>())
             {
-                foreach (Vector3 node in outsideNodePositions)
-                {
-                    if (Vector3.Distance(node, position) < 10)
-                    {
-                        destinationInOtherArea = false;
-                        break;
-                    }
-                    else { destinationInOtherArea = true; }
-                }
-                if (destinationInOtherArea)
-                {
-                    foreach (EntranceTeleport teleport in outsideTeleports)
-                    {
-                        NavMesh.CalculatePath(__instance.transform.position, teleport.entrancePoint.transform.position, __instance.agent.areaMask, pathToTeleport);
-                        if (pathToTeleport.status != NavMeshPathStatus.PathComplete) { continue; }
+                bool destinationInOtherArea = false;
+                NavMeshPath pathToTeleport = new NavMeshPath();
+                float prevPathDistance = float.PositiveInfinity;
 
-                        var corners = pathToTeleport.corners;
-                        var pathDistance = 0f;
-
-                        for (int i = 1; i < corners.Length; i++)
+                if (__instance.isOutside)
+                {
+                    foreach (Vector3 node in outsideNodePositions)
+                    {
+                        if (Vector3.Distance(node, position) < 10)
                         {
-                            pathDistance += Vector3.Distance(corners[i - 1], corners[i]);
+                            destinationInOtherArea = false;
+                            break;
                         }
-                        if (pathDistance < prevPathDistance)
+                        else { destinationInOtherArea = true; }
+                    }
+                    if (destinationInOtherArea)
+                    {
+                        foreach (EntranceTeleport teleport in outsideTeleports)
                         {
-                            prevPathDistance = pathDistance;
-                            checkForPath = false;
-                            position = teleport.entrancePoint.transform.position;
-                            __instance.SetDestinationToPosition(position);
+                            NavMesh.CalculatePath(__instance.transform.position, teleport.entrancePoint.transform.position, __instance.agent.areaMask, pathToTeleport);
+                            if (pathToTeleport.status != NavMeshPathStatus.PathComplete) { continue; }
+
+                            var corners = pathToTeleport.corners;
+                            var pathDistance = 0f;
+
+                            for (int i = 1; i < corners.Length; i++)
+                            {
+                                pathDistance += Vector3.Distance(corners[i - 1], corners[i]);
+                            }
+                            if (pathDistance < prevPathDistance)
+                            {
+                                prevPathDistance = pathDistance;
+                                checkForPath = false;
+                                position = teleport.entrancePoint.transform.position;
+                                __instance.SetDestinationToPosition(position);
+                            }
+                        }
+                    }
+                }
+                if (!__instance.isOutside)
+                {
+                    foreach (Vector3 node in insideNodePositions)
+                    {
+                        if (Vector3.Distance(node, position) < 10)
+                        {
+                            destinationInOtherArea = false;
+                            break;
+                        }
+                        else { destinationInOtherArea = true; }
+                    }
+                    if (destinationInOtherArea)
+                    {
+                        foreach (EntranceTeleport teleport in insideTeleports)
+                        {
+                            NavMesh.CalculatePath(__instance.transform.position, teleport.entrancePoint.transform.position, __instance.agent.areaMask, pathToTeleport);
+                            if (pathToTeleport.status != NavMeshPathStatus.PathComplete) { continue; }
+
+                            var corners = pathToTeleport.corners;
+                            var pathDistance = 0f;
+
+                            for (int i = 1; i < corners.Length; i++)
+                            {
+                                pathDistance += Vector3.Distance(corners[i - 1], corners[i]);
+                            }
+                            if (pathDistance < prevPathDistance)
+                            {
+                                prevPathDistance = pathDistance;
+                                checkForPath = false;
+                                position = teleport.entrancePoint.transform.position;
+                                __instance.SetDestinationToPosition(position);
+                            }
                         }
                     }
                 }
             }
-            if (!__instance.isOutside)
-            {
-                foreach (Vector3 node in insideNodePositions)
-                {
-                    if (Vector3.Distance(node, position) < 10)
-                    {
-                        destinationInOtherArea = false;
-                        break;
-                    }
-                    else { destinationInOtherArea = true; }
-                }
-                if (destinationInOtherArea)
-                {
-                    foreach (EntranceTeleport teleport in insideTeleports)
-                    {
-                        NavMesh.CalculatePath(__instance.transform.position, teleport.entrancePoint.transform.position, __instance.agent.areaMask, pathToTeleport);
-                        if (pathToTeleport.status != NavMeshPathStatus.PathComplete) { continue; }
-
-                        var corners = pathToTeleport.corners;
-                        var pathDistance = 0f;
-
-                        for (int i = 1; i < corners.Length; i++)
-                        {
-                            pathDistance += Vector3.Distance(corners[i - 1], corners[i]);
-                        }
-                        if (pathDistance < prevPathDistance)
-                        {
-                            prevPathDistance = pathDistance;
-                            checkForPath = false;
-                            position = teleport.entrancePoint.transform.position;
-                            __instance.SetDestinationToPosition(position);
-                        }
-                    }
-                }
-            }
+            
         }
     }
 }

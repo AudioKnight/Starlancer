@@ -89,7 +89,7 @@ namespace StarlancerEnemyEscape
 
         //================= Predefined Dictionaries =================
 
-        internal static Dictionary<string, string> EnemyWhitelist = new Dictionary<string, string>  {
+        internal static Dictionary<string, string> EnemyBlacklist = new Dictionary<string, string>  {
             { "Girl", "Unneeded"},
             { "Masked", "Unneeded"},
             { "Tulip Snake", "Unneeded"},
