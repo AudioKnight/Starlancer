@@ -60,6 +60,8 @@ namespace EnemyEscape
             exteriorPathRange = configEscapeExteriorRange[enemy.enemyType.enemyName].Value;
             pathCooldownTime = configEscapeCooldownTime[enemy.enemyType.enemyName].Value;
 
+            logger.LogInfo($"Adding EscapeComponent to {enemy.gameObject.name}. It may now roam freely.");
+
             if (EnemyEscapeConfigDictionary[enemy.enemyType.enemyName].Value == -1)
             {
                 chanceToEscape = GetCurrentlySelectedPreset().GetValueOrDefault(enemy.enemyType.enemyName, 0);
@@ -68,6 +70,13 @@ namespace EnemyEscape
             {
                 chanceToEscape = EnemyEscapeConfigDictionary[enemy.enemyType.enemyName].Value;
             }
+
+            if (chanceToEscape == 0)
+            {
+                logger.LogInfo($"ChanceToEscape is 0, removing EscapeComponent from {gameObject.name}");
+                Destroy(enemy.GetComponent<StarlancerEscapeComponent>());
+            }
+
             if (enemy.isOutside) 
             {
                 outsideFavoriteSpot = enemy.favoriteSpot;
@@ -338,22 +347,9 @@ namespace EnemyEscape
                 }
             }
 
-            if (__instance.gameObject.GetComponent<StarlancerEscapeComponent>() == null) //Add the Escape Component, then remove it if chanceToEscape == 0.
+            if (insideAINodes.Length != 0 && __instance.gameObject.GetComponent<StarlancerEscapeComponent>() == null) //Add the Escape Component, then remove it if chanceToEscape == 0.
             {
                 StarlancerEscapeComponent EscapeComponent = __instance.gameObject.AddComponent<StarlancerEscapeComponent>();
-                logger.LogInfo($"Adding EscapeComponent to {__instance.gameObject.name}. It may now roam freely.");
-
-                if (insideAINodes.Length == 0)
-                {
-                    logger.LogInfo($"{__instance.gameObject.name} is a placed prefab. Removing Escape Component to prevent errors.");
-                    Destroy(EscapeComponent);
-                }
-
-                if (EscapeComponent.chanceToEscape == 0)
-                {
-                    logger.LogInfo($"ChanceToEscape is 0, removing EscapeComponent from {__instance.gameObject.name}");
-                    Destroy(EscapeComponent);
-                }
             }
         }
 
