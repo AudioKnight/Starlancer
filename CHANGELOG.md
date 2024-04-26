@@ -1,3 +1,30 @@
+- 1.1.0
+  - Added StarlancerEnemyEscape.
+  - Updated dependencies.
+  
+- 1.0.0
+  - Added StarlancerWarehouse to the Starlancer modpack.
+  - Updated dependencies.
+
+- 0.8.0
+  - Updated dependencies.
+
+- 0.7.0
+  - Updated dependencies to reflect new versions of Starlancer mods.
+  
+- 0.6.0
+  - Updated dependencies, no longer keeping parity with StarlancerMoons version number due to instances where dependencies need to be updated without warranting a major version progression.
+
+- 0.5.0
+  - Updated dependencies to reflect new version of StarlancerMoons.
+
+- 0.4.1
+  - Actually updated the versions of StarlancerMoons and StarlancerMusic the modpack targets.
+
+- 0.4.0
+  - Updated StarlancerMoons to no longer be dependent on LethalExpansion. It is now dependent on LethalLevelLoader.
+  - Polished up the songs in StarlancerMusic.
+
 - 0.3.0
   - Added StarlancerMusic to the Starlancer modpack.
 
