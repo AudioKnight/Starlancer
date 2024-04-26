@@ -504,7 +504,7 @@ namespace EnemyEscape
                                 prevPathDistance = pathDistance;
                                 checkForPath = false;
                                 position = teleport.entrancePoint.transform.position;
-                                __instance.SetDestinationToPosition(position);
+                                __instance.destination = position;
                             }
                         }
                     }
@@ -539,7 +539,7 @@ namespace EnemyEscape
                                 prevPathDistance = pathDistance;
                                 checkForPath = false;
                                 position = teleport.entrancePoint.transform.position;
-                                __instance.SetDestinationToPosition(position);
+                                __instance.destination = position; ;
                             }
                         }
                     }
