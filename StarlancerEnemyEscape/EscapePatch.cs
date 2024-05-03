@@ -27,6 +27,7 @@ namespace EnemyEscape
         internal int exteriorPathRange; //200 default, config range [50 - 9999]
         internal int pathCooldownTime;  //30 default, config int range [10 - 300] (10 seconds up to 5 minutes)
 
+        private bool ignoreStateCheck;
         private bool pathingToTeleport;
         private bool teleportFound;
         private bool closeToTeleport;
@@ -89,6 +90,9 @@ namespace EnemyEscape
                 outsideFavoriteSpot = outsideAINodes[random.Next(0, outsideAINodes.Length - 1)].transform;
                 pathRange = interiorPathRange;
             }
+
+            //Ignore (currentBehaviourStateIndex != 0) check
+            if (enemy.GetType() == typeof(RedLocustBees)) { ignoreStateCheck = true; }
         }
 
 
@@ -98,11 +102,12 @@ namespace EnemyEscape
         {
             if (enemy.isEnemyDead) { Destroy(enemy.GetComponent<StarlancerEscapeComponent>()); }
 
-            if (enemy.currentBehaviourStateIndex != 0) { lastPathAttempt += Time.deltaTime; } //Pause the cooldown if not in state 0
-
             if ((Time.time - lastTeleportCheck) <= UpdateInterval) { return; }
 
             lastTeleportCheck = Time.time;
+
+            if (!ignoreStateCheck && enemy.currentBehaviourStateIndex != 0) { lastPathAttempt += Time.deltaTime; } //Pause the cooldown if not in state 0 and ignoreStateZero is false
+
             //logger.LogInfo($"Update check. PathCooldownTime remaining = {PathCooldownTime - (Time.time - lastPathAttempt)}. PathingToTeleport is {pathingToTeleport}. ");
 
             if ((Time.time - lastPathAttempt) > pathCooldownTime || pathingToTeleport) //Attempt to path to a nearby entrance.
@@ -122,10 +127,15 @@ namespace EnemyEscape
                         return; 
                     }
                 }
+                else if (enemy.GetType() == typeof(RedLocustBees) && !enemy.GetComponent<RedLocustBees>().searchForHive.inProgress) //Prevents random pathing when sitting at hive
+                {
+                    lastPathAttempt = Time.time;
+                    return;
+                } 
 
-                //===========================================
+                    //===========================================
 
-                if (pathingToTeleport)
+                    if (pathingToTeleport)
                 {
                     enemy.SetDestinationToPosition(closestTeleportPosition);
                     enemy.agent.SetDestination(closestTeleportPosition);                    
@@ -183,7 +193,8 @@ namespace EnemyEscape
                             closeToTeleport = true;
                         }
                     }
-                }if (!enemy.isOutside)
+                }
+                if (!enemy.isOutside)
                 {
                     foreach (EntranceTeleport teleport in insideTeleports)
                     {
@@ -232,6 +243,10 @@ namespace EnemyEscape
                         {
                             enemy.StartSearch(enemy.transform.position, enemy.GetComponent<BlobAI>().searchForPlayers);
                         }
+                        else if (enemy.GetType() == typeof(RedLocustBees))
+                        {
+                            enemy.StartSearch(enemy.transform.position, enemy.GetComponent<RedLocustBees>().searchForHive);
+                        }
                         else { enemy.StartSearch(enemy.transform.position); }
 
                         //===========================================
@@ -274,6 +289,10 @@ namespace EnemyEscape
                         else if (enemy.GetType() == typeof(BlobAI))
                         {
                             enemy.StartSearch(enemy.transform.position, enemy.GetComponent<BlobAI>().searchForPlayers);
+                        }
+                        else if (enemy.GetType() == typeof(RedLocustBees))
+                        {
+                            enemy.StartSearch(enemy.transform.position, enemy.GetComponent<RedLocustBees>().searchForHive);
                         }
                         else { enemy.StartSearch(enemy.transform.position); }
 
