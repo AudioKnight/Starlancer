@@ -13,7 +13,7 @@ namespace StarlancerEnemyEscape
     {
         private const string modGUID = "AudioKnight.StarlancerEnemyEscape";
         private const string modName = "Starlancer EnemyEscape";
-        private const string modVersion = "2.1.0";
+        private const string modVersion = "2.4.1";
 
         private readonly Harmony harmony = new Harmony(modGUID);
         public static StarlancerEnemyEscapeBase Instance;
@@ -97,6 +97,7 @@ namespace StarlancerEnemyEscape
             { "Manticoil", "Unneeded"},
             { "Lasso", "Unimplemented"},
             { "Red pill", "Unimplemented"},
+            { "Red Locust Bees", "Buggy"},
         };
         internal static Dictionary<string, string> VanillaEnemyList = new Dictionary<string, string>  {
             { "Blob", "" },
@@ -116,7 +117,8 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", "" },
             { "MouthDog", "" },
             { "RadMech", "" },
-            { "Red Locust Bees", "" },
+            //{ "Red Locust Bees", "" },
+            { "Tulip Snake", ""},
         };
 
         internal static Dictionary<string, int> DefaultPresetValues = new Dictionary<string, int>  {
@@ -137,7 +139,8 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", 0 },
             { "MouthDog", 0 },
             { "RadMech", 0 },
-            { "Red Locust Bees", 5 },
+            //{ "Red Locust Bees", 5 },
+            { "Tulip Snake", 5},
         };
         internal static Dictionary<string, int> DisabledPresetValues = new Dictionary<string, int>  {
             { "Blob", 0 },
@@ -157,7 +160,8 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", 0 },
             { "MouthDog", 0 },
             { "RadMech", 0 },
-            { "Red Locust Bees", 0 },
+            //{ "Red Locust Bees", 0 },
+            { "Tulip Snake", 0},
         };
         internal static Dictionary<string, int> MinimalPresetValues = new Dictionary<string, int>  {
             { "Blob", 1 },
@@ -177,7 +181,8 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", 1 },
             { "MouthDog", 1 },
             { "RadMech", 1 },
-            { "Red Locust Bees", 1 },
+            //{ "Red Locust Bees", 1 },
+            { "Tulip Snake", 1},
         };
         internal static Dictionary<string, int> ChaosPresetValues = new Dictionary<string, int>  {
             { "Blob", 100 },
@@ -197,7 +202,8 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", 100 },
             { "MouthDog", 100 },
             { "RadMech", 100 },
-            { "Red Locust Bees", 100 },
+            //{ "Red Locust Bees", 100 },
+            { "Tulip Snake", 100},
         };
     }
 }
