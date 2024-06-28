@@ -127,11 +127,11 @@ namespace EnemyEscape
                         return; 
                     }
                 }
-                else if (enemy.GetType() == typeof(RedLocustBees) && !enemy.GetComponent<RedLocustBees>().searchForHive.inProgress) //Prevents random pathing when sitting at hive
+                /*else if (enemy.GetType() == typeof(RedLocustBees) && !enemy.GetComponent<RedLocustBees>().searchForHive.inProgress) //Prevents random pathing when sitting at hive
                 {
                     lastPathAttempt = Time.time;
                     return;
-                } 
+                }*/ 
 
                     //===========================================
 
@@ -243,10 +243,10 @@ namespace EnemyEscape
                         {
                             enemy.StartSearch(enemy.transform.position, enemy.GetComponent<BlobAI>().searchForPlayers);
                         }
-                        else if (enemy.GetType() == typeof(RedLocustBees))
+                        /*else if (enemy.GetType() == typeof(RedLocustBees))
                         {
                             enemy.StartSearch(enemy.transform.position, enemy.GetComponent<RedLocustBees>().searchForHive);
-                        }
+                        }*/
                         else { enemy.StartSearch(enemy.transform.position); }
 
                         //===========================================
@@ -290,10 +290,10 @@ namespace EnemyEscape
                         {
                             enemy.StartSearch(enemy.transform.position, enemy.GetComponent<BlobAI>().searchForPlayers);
                         }
-                        else if (enemy.GetType() == typeof(RedLocustBees))
+                        /*else if (enemy.GetType() == typeof(RedLocustBees))
                         {
                             enemy.StartSearch(enemy.transform.position, enemy.GetComponent<RedLocustBees>().searchForHive);
-                        }
+                        }*/
                         else { enemy.StartSearch(enemy.transform.position); }
 
                         //===========================================
@@ -452,7 +452,8 @@ namespace EnemyEscape
                 }
             }
 
-            for (int i = 0; i < entranceTeleports.Length; i++) //Instantiate AI and SpawnDenial nodes at each EntranceTeleport
+            /*for (int i = 0; i < entranceTeleports.Length; i++) //Instantiate AI and SpawnDenial nodes at each EntranceTeleport
+                                                                 //Disabled. These nodes no longer serve any functional purpose, and they can make outside Brackens camp fire exits on some moons
             {
                 if (entranceTeleports[i].isEntranceToBuilding)
                 {
@@ -477,7 +478,7 @@ namespace EnemyEscape
                     RoundManager.Instance.insideAINodes.AddItem(entranceNode);
                 }
                 
-            }
+            }*/
         }
 
         //====================================================================================================================================================================================
