@@ -119,6 +119,8 @@ namespace StarlancerEnemyEscape
             { "RadMech", "" },
             //{ "Red Locust Bees", "" },
             { "Tulip Snake", ""},
+            { "Bush Wolf", ""},
+            { "Clay Surgeon", ""},
         };
 
         internal static Dictionary<string, int> DefaultPresetValues = new Dictionary<string, int>  {
@@ -141,6 +143,8 @@ namespace StarlancerEnemyEscape
             { "RadMech", 0 },
             //{ "Red Locust Bees", 5 },
             { "Tulip Snake", 5},
+            { "Bush Wolf", 5},
+            { "Clay Surgeon", 5},
         };
         internal static Dictionary<string, int> DisabledPresetValues = new Dictionary<string, int>  {
             { "Blob", 0 },
@@ -162,6 +166,8 @@ namespace StarlancerEnemyEscape
             { "RadMech", 0 },
             //{ "Red Locust Bees", 0 },
             { "Tulip Snake", 0},
+            { "Bush Wolf", 0},
+            { "Clay Surgeon", 0},
         };
         internal static Dictionary<string, int> MinimalPresetValues = new Dictionary<string, int>  {
             { "Blob", 1 },
@@ -183,6 +189,8 @@ namespace StarlancerEnemyEscape
             { "RadMech", 1 },
             //{ "Red Locust Bees", 1 },
             { "Tulip Snake", 1},
+            { "Bush Wolf", 1},
+            { "Clay Surgeon", 1},
         };
         internal static Dictionary<string, int> ChaosPresetValues = new Dictionary<string, int>  {
             { "Blob", 100 },
@@ -204,6 +212,8 @@ namespace StarlancerEnemyEscape
             { "RadMech", 100 },
             //{ "Red Locust Bees", 100 },
             { "Tulip Snake", 100},
+            { "Bush Wolf", 100},
+            { "Clay Surgeon", 100},
         };
     }
 }
