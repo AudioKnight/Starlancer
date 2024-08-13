@@ -1,77 +1,17 @@
 ﻿using UnityEngine;
 using HarmonyLib;
 using static StarlancerAIFix.StarlancerAIFixBase;
+using UnityEngine.AI;
 
 namespace StarlancerAIFix.Patches
 {
-    /*public class IndoorVisibilitySpoofer : MonoBehaviour, IVisibleThreat      //Future implementation.
-    {
-        public EnemyAI thisEnemy;
-        public Transform eye;
-        public float visibility;
-        public int threatLevel;
-        public int interestLevel;
-        public Transform enemyTransform;
-        public NavMeshAgent agent;
-        public Vector3 agentLocalVelocity;
-        public ThreatType Generic;
-        ThreatType IVisibleThreat.type => Generic;
-
-        int IVisibleThreat.SendSpecialBehaviour(int id)
-        {
-            return 0;
-        }
-
-        int IVisibleThreat.GetThreatLevel(Vector3 seenByPosition)
-        {
-            return threatLevel;
-        }
-
-        int IVisibleThreat.GetInterestLevel()
-        {
-            return interestLevel;
-        }
-
-        Transform IVisibleThreat.GetThreatLookTransform()
-        {
-            return eye;
-        }
-
-        Transform IVisibleThreat.GetThreatTransform()
-        {
-            return enemyTransform;
-        }
-
-        Vector3 IVisibleThreat.GetThreatVelocity()
-        {
-            if (thisEnemy.IsOwner)
-            {
-                return agent.velocity;
-            }
-            return Vector3.zero;
-        }
-
-        float IVisibleThreat.GetVisibility()
-        {
-            if (thisEnemy.isEnemyDead)
-            {
-                return 0f;
-            }
-            if (agent.velocity.sqrMagnitude > 0f)
-            {
-                return 1f;
-            }
-            return visibility;
-        }
-    }*/
-
-
     public class AIFix
     {
         public static GameObject[] outsideAINodes;
         public static GameObject[] insideAINodes;
         public static Vector3[] outsideNodePositions;
         public static Vector3[] insideNodePositions;
+        public static string[] enemyWhitelist = ["Blob", "Butler", "Centipede", "Crawler", "Flowerman", "HoarderBug", "Nutcracker", "SandSpider"];
 
         private static GameObject[] FindOutsideAINodes()
         {
@@ -106,34 +46,26 @@ namespace StarlancerAIFix.Patches
 
         //====================================================================================================================================================================================
 
-        [HarmonyPatch(typeof(EnemyAI), "Awake")]
-        [HarmonyPostfix]
-        private static void AIAwakePatch()
-        {
-            FindOutsideAINodes();
-            FindInsideAINodes();
-        }
-
-        //====================================================================================================================================================================================
-
         [HarmonyPatch(typeof(EnemyAI), "Start")]
         [HarmonyPostfix]
 
         private static void AIFixPatch(EnemyAI __instance)
         {
-
+            FindOutsideAINodes();
+            FindInsideAINodes();
             Vector3 enemyPos = __instance.transform.position;
             Vector3 closestOutsideNode = Vector3.positiveInfinity;
             Vector3 closestInsideNode = Vector3.positiveInfinity;
+            __instance.removedPowerLevel = true;
 
-            for (int i = 0; i < outsideNodePositions.Length; i++)
+            for (int i = 0; i < outsideNodePositions.Length; i++) //Cache outside node positions.
             {
                 if ((outsideNodePositions[i] - enemyPos).sqrMagnitude < (closestOutsideNode - enemyPos).sqrMagnitude)
                 {
                     closestOutsideNode = outsideNodePositions[i];
                 }
             }
-            for (int i = 0; i < insideAINodes.Length; i++)
+            for (int i = 0; i < insideAINodes.Length; i++) //Cache inside node positions.
             {
                 if ((insideNodePositions[i] - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude)
                 {
@@ -141,19 +73,55 @@ namespace StarlancerAIFix.Patches
                 }
             }
 
-            if (!__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude))
+            if (!__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude)) //Set isOutside true if the enemy is outside.
             {
                 __instance.SetEnemyOutside(true);
                 int nodeIndex = UnityEngine.Random.Range(0, __instance.allAINodes.Length - 1);
                 __instance.favoriteSpot = __instance.allAINodes[nodeIndex].transform;
                 logger.LogInfo($"{__instance.gameObject.name} spawned outside; Switching to exterior AI. Setting Favorite Spot to {__instance.favoriteSpot}.");
             }
-            else if (__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude > (closestInsideNode - enemyPos).sqrMagnitude))
+            else if (__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude > (closestInsideNode - enemyPos).sqrMagnitude)) //Set isOutside false if the enemy is inside.
             {
                 __instance.SetEnemyOutside(false);
                 int nodeIndex = UnityEngine.Random.Range(0, __instance.allAINodes.Length - 1);
                 __instance.favoriteSpot = __instance.allAINodes[nodeIndex].transform;
                 logger.LogInfo($"{__instance.gameObject.name} spawned inside; Switching to interior AI. Setting Favorite Spot to {__instance.favoriteSpot}.");
+            }
+        }
+
+        //====================================================================================================================================================================================
+
+        [HarmonyPatch(typeof(EnemyAI), "SubtractFromPowerLevel")]
+        [HarmonyPostfix]
+
+        private static void SubtractPowerLevelPatch(EnemyAI __instance) //When an enemy dies, subtracts its power level from the correct list.
+        {
+            if (RoundManager.Instance.currentLevel.OutsideEnemies.Any(enemy => enemy.enemyType == __instance.enemyType) || RoundManager.Instance.WeedEnemies.Any(enemy => enemy.enemyType == __instance.enemyType)) //Outside & Weeds
+            {
+                logger.LogInfo($"{__instance.gameObject.name} from the exterior enemy list has died; \nPrevious exterior power level is {RoundManager.Instance.currentOutsideEnemyPower}");
+
+                RoundManager.Instance.currentOutsideEnemyPower = Mathf.Max(RoundManager.Instance.currentOutsideEnemyPower - __instance.enemyType.PowerLevel, 0);
+
+                logger.LogInfo($"Removing {__instance.gameObject.name}'s power ({__instance.enemyType.PowerLevel}) from the RoundManager; \nCurrent exterior power level is {RoundManager.Instance.currentOutsideEnemyPower}");
+            }
+
+            else if (RoundManager.Instance.currentLevel.Enemies.Any(enemy => enemy.enemyType == __instance.enemyType)) //Inside
+            {
+                logger.LogInfo($"{__instance.gameObject.name} from the interior enemy list has died; \nPrevious interior power level is {RoundManager.Instance.currentEnemyPower}");
+
+                RoundManager.Instance.currentEnemyPower = Mathf.Max(RoundManager.Instance.currentEnemyPower - __instance.enemyType.PowerLevel, 0);
+                RoundManager.Instance.cannotSpawnMoreInsideEnemies = false;
+
+                logger.LogInfo($"Removing {__instance.gameObject.name}'s power ({__instance.enemyType.PowerLevel}) from the RoundManager; \nCurrent interior power level is {RoundManager.Instance.currentEnemyPower}");
+            }
+
+            else if (RoundManager.Instance.currentLevel.DaytimeEnemies.Any(enemy => enemy.enemyType == __instance.enemyType)) //Daytime
+            {
+                logger.LogInfo($"{__instance.gameObject.name} from the daytime enemy list has died; \nPrevious daytime power level is {RoundManager.Instance.currentDaytimeEnemyPower}");
+
+                RoundManager.Instance.currentDaytimeEnemyPower = Mathf.Max(RoundManager.Instance.currentDaytimeEnemyPower - __instance.enemyType.PowerLevel, 0);
+
+                logger.LogInfo($"Removing {__instance.gameObject.name}'s power ({__instance.enemyType.PowerLevel}) from the RoundManager; \nCurrent daytime power level is {RoundManager.Instance.currentDaytimeEnemyPower}");
             }
         }
 
@@ -179,7 +147,12 @@ namespace StarlancerAIFix.Patches
 
                 case 2:
 
-                    if (__instance.isOutside)
+                    if (__instance.targetingPlayer && ((!__instance.isOutside && !__instance.targetPlayer.isInsideFactory) || (__instance.isOutside && __instance.targetPlayer.isInsideFactory))) //Allows the Jester to end hostilities if there are no players in its area.
+                    {
+                        __instance.targetPlayer = null;
+                    }
+
+                    if (__instance.isOutside) //A copy of some vanilla Jester code, but with flipped logic so that it works outside.
                     {
                         if (___previousState != 2)
                         {
@@ -227,7 +200,7 @@ namespace StarlancerAIFix.Patches
         [HarmonyPatch(typeof(SandWormAI), "StartEmergeAnimation")]
         [HarmonyPostfix]
 
-        private static void SandwormResetPatch(SandWormAI __instance)
+        private static void SandwormResetPatch(SandWormAI __instance) //Sets the position of an interior sandworm to a random node after it attacks.
         {
             if (!__instance.isOutside)
             {
@@ -238,10 +211,23 @@ namespace StarlancerAIFix.Patches
 
         //====================================================================================================================================================================================
 
+        [HarmonyPatch(typeof(SandWormAI), "StartEmergeAnimation")]
+        [HarmonyPostfix]
+
+        private static void SandwormAttackPatch(SandWormAI __instance) //A simple postfix that makes the sandworm ignore its normal logic while inside. If it's close enough to trigger StartEmergeAnimation(), it will always follow through.
+        {
+            if (!__instance.isOutside)
+            {
+                __instance.EmergeServerRpc((int)RoundManager.Instance.YRotationThatFacesTheFarthestFromPosition(__instance.transform.position + Vector3.up * 1.5f, 30f));
+            }
+        }
+
+        //====================================================================================================================================================================================
+
         [HarmonyPatch(typeof(SpringManAI), "DoAIInterval")]
         [HarmonyPostfix]
 
-        private static void SpringManAnimPatch(SpringManAI __instance)
+        private static void SpringManAnimPatch(SpringManAI __instance) //If it walks, it walks.
         {
             switch (__instance.currentBehaviourStateIndex)
             {
@@ -263,7 +249,7 @@ namespace StarlancerAIFix.Patches
         [HarmonyPatch(typeof(PufferAI), "Start")]
         [HarmonyPostfix]
 
-        private static void PufferPrefabPatch(PufferAI __instance)
+        private static void PufferPrefabPatch(PufferAI __instance) //Bizarre fix for a bizarre creature.
         {
             if (__instance.isOutside)
             {
@@ -276,7 +262,7 @@ namespace StarlancerAIFix.Patches
         [HarmonyPatch(typeof(EnemyAI), "EnableEnemyMesh")]
         [HarmonyPrefix]
 
-        private static bool EnemyMeshPatch(EnemyAI __instance, bool enable, bool overrideDoNotSet = false)
+        private static bool EnemyMeshPatch(EnemyAI __instance, bool enable, bool overrideDoNotSet = false) //Redundant with ButteryFixes, but the method is under EnemyAI so I'll just leave this here.
         {
             int skinNull = 0;
             int meshNull = 0;
@@ -331,44 +317,123 @@ namespace StarlancerAIFix.Patches
 
         //====================================================================================================================================================================================
 
-        /*public static string[] enemyWhitelist = {"Blob", "Butler", "Centipede", "Crawler", "Flowerman", "Hoarding bug", "Nutcracker", "Bunker Spider"};
+        [HarmonyPatch(typeof(EnemyAI), "PlayerIsTargetable")] //Thanks 1A3!
+        [HarmonyPrefix]
+        private static void PlayerIsTargetablePatch(ref bool overrideInsideFactoryCheck)
+        {
+            if (StartOfRound.Instance.currentLevelID == 3) //If at the company building, ignore the inside factory check.
+            {
+                overrideInsideFactoryCheck = true;
+            }
+        }
 
-        [HarmonyPatch(typeof(EnemyAI), "Start")]          //Future implementation.
+        //====================================================================================================================================================================================
+
+        [HarmonyPatch(typeof(EnemyAI), "Start")]
+        [HarmonyPostfix]
+
+        private static void CompanyOutsideOverride(EnemyAI __instance)
+        {
+            if (StartOfRound.Instance.currentLevelID == 3) //If at the company building, enemy is always set to Outside.
+            {
+                __instance.isOutside = true;
+            }
+        }
+
+        //====================================================================================================================================================================================
+        internal class ThreatComponent : MonoBehaviour, IVisibleThreat //A dummy IVisibleThreat component to allow enemies like the RadMech to target interior enemies like the Bracken.
+        {
+            public EnemyAI thisEnemy;
+            public Transform eye;
+            public float visibility;
+            public int threatLevel;
+            public int interestLevel;
+            public Transform enemyTransform;
+            public NavMeshAgent agent;
+            public Vector3 agentLocalVelocity;
+            public ThreatType Generic;
+
+            ThreatType IVisibleThreat.type => Generic;
+
+            int IVisibleThreat.SendSpecialBehaviour(int id)
+            {
+                return 0;
+            }
+
+            int IVisibleThreat.GetThreatLevel(Vector3 seenByPosition)
+            {
+                return threatLevel;
+            }
+
+            int IVisibleThreat.GetInterestLevel()
+            {
+                return interestLevel;
+            }
+
+            Transform IVisibleThreat.GetThreatLookTransform()
+            {
+                return eye;
+            }
+
+            Transform IVisibleThreat.GetThreatTransform()
+            {
+                return enemyTransform;
+            }
+
+            Vector3 IVisibleThreat.GetThreatVelocity()
+            {
+                if (thisEnemy.IsOwner)
+                {
+                    return agent.velocity;
+                }
+                return Vector3.zero;
+            }
+
+            float IVisibleThreat.GetVisibility()
+            {
+                if (thisEnemy.isEnemyDead)
+                {
+                    return 0f;
+                }
+                if (agent.velocity.sqrMagnitude > 0f)
+                {
+                    return 1f;
+                }
+                return visibility;
+            }
+        }
+        
+
+        //====================================================================================================================================================================================
+
+        [HarmonyPatch(typeof(EnemyAI), "Start")]
         [HarmonyPostfix]
 
         private static void ThreatPatch(EnemyAI __instance)
         {
-            logger.LogInfo($"The whitelist contains: {enemyWhitelist}");
-
             if (Array.IndexOf(enemyWhitelist, __instance.enemyType.name) != -1)
             {
-                *//*IVisibleThreat[] threats = __instance.GetComponentsInChildren<IVisibleThreat>();
-                if (threats != null) { return; }*//*
+                logger.LogInfo($"The Enemy Whitelist contains: {string.Join(", ", enemyWhitelist)}");
 
-                IVisibleThreat threatExists = __instance.GetComponentInChildren<IVisibleThreat>();
-                if (threatExists != null) { return; }
+                IVisibleThreat threatAlreadyExists = __instance.GetComponentInChildren<IVisibleThreat>();
+                if (threatAlreadyExists != null) { return; } //Do nothing if an IVisibleThreat component somehow exists already.
 
-                Collider[] threatColliders = __instance.GetComponentsInChildren<Collider>();
-                logger.LogInfo($"Making {__instance.gameObject.name} threatening.");
-
-                foreach (var threatCollider in threatColliders)
+                if (threatAlreadyExists == null)
                 {
-                    if (threatCollider.gameObject.layer == 19)
-                    {
-                        IndoorVisibilitySpoofer iVS = threatCollider.gameObject.AddComponent<IndoorVisibilitySpoofer>();
+                    logger.LogInfo($"Adding IVisibleThreat component to {__instance.gameObject.name}.");
 
-                        iVS.thisEnemy = __instance;
-                        iVS.eye = __instance.eye;
-                        iVS.visibility = 1f; //0.5 in release, 1f is for Xu Giant testing
-                        iVS.threatLevel = 18; //5 in release, 18 is for Xu Giant testing
-                        iVS.interestLevel = 0;
-                        iVS.enemyTransform = __instance.transform;
-                        iVS.agent = __instance.agent;
+                    ThreatComponent IVS = __instance.gameObject.AddComponent<ThreatComponent>();
 
-                        logger.LogInfo($"Adding IVisibleThreat component to {__instance.gameObject.name}'s {threatCollider.gameObject.name}.");
-                    }
+                    IVS.thisEnemy = __instance;
+                    IVS.eye = __instance.eye;
+                    IVS.visibility = 0.5f;
+                    IVS.threatLevel = 3;
+                    IVS.interestLevel = 0;
+                    IVS.enemyTransform = __instance.transform;
+                    IVS.agent = __instance.agent;
+
                 }
             }
-        }*/
+        }
     }
 }
