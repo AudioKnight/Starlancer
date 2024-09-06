@@ -105,7 +105,7 @@ namespace StarlancerAIFix.Patches
 
         private static void SubtractPowerLevelPatch(EnemyAI __instance) //When an enemy dies, subtracts its power level from the correct list.
         {
-            if (RoundManager.Instance.currentLevel.OutsideEnemies.Any(enemy => enemy.enemyType == __instance.enemyType) || RoundManager.Instance.WeedEnemies.Any(enemy => enemy.enemyType == __instance.enemyType)) //Outside & Weeds
+            if (RoundManager.Instance.currentLevel.OutsideEnemies.Any(enemy => enemy.enemyType == __instance.enemyType) /*|| RoundManager.Instance.WeedEnemies.Any(enemy => enemy.enemyType == __instance.enemyType)*/) //Outside & Weeds
             {
                 logger.LogInfo($"{__instance.gameObject.name} from the exterior enemy list has died; \nPrevious exterior power level is {RoundManager.Instance.currentOutsideEnemyPower}");
 
