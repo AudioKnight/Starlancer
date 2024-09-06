@@ -409,7 +409,7 @@ namespace StarlancerAIFix.Patches
         {
             if (Array.IndexOf(enemyWhitelist, __instance.enemyType.name) != -1)
             {
-                logger.LogInfo($"The Enemy Whitelist contains: {string.Join(", ", enemyWhitelist)}");
+                logger.LogInfo($"The Enemy Whitelist contains: {string.Join(", ", enemyWhitelist)}.");
 
                 IVisibleThreat threatAlreadyExists = __instance.GetComponentInChildren<IVisibleThreat>();
                 if (threatAlreadyExists != null) { return; } //Do nothing if an IVisibleThreat component somehow exists already.
