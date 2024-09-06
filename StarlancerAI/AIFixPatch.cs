@@ -77,6 +77,24 @@ namespace StarlancerAIFix.Patches
                     {
                         closestInsideNode = insideNodePositions[i];
                     }
+
+                }
+
+                if (!__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude)) //Set isOutside true if the enemy is outside.
+                {
+                    __instance.SetEnemyOutside(true);
+                    int nodeIndex = UnityEngine.Random.Range(0, __instance.allAINodes.Length - 1);
+                    __instance.favoriteSpot = __instance.allAINodes[nodeIndex].transform;
+                    logger.LogInfo($"{__instance.gameObject.name} spawned outside; Switching to exterior AI. Setting Favorite Spot to {__instance.favoriteSpot}.");
+                }
+                else if (__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude > (closestInsideNode - enemyPos).sqrMagnitude)) //Set isOutside false if the enemy is inside.
+                {
+                    __instance.SetEnemyOutside(false);
+                    int nodeIndex = UnityEngine.Random.Range(0, __instance.allAINodes.Length - 1);
+                    __instance.favoriteSpot = __instance.allAINodes[nodeIndex].transform;
+                    logger.LogInfo($"{__instance.gameObject.name} spawned inside; Switching to interior AI. Setting Favorite Spot to {__instance.favoriteSpot}.");
+                }
+
                 }
     
                 if (!__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude)) //Set isOutside true if the enemy is outside.
@@ -93,6 +111,7 @@ namespace StarlancerAIFix.Patches
                     __instance.favoriteSpot = __instance.allAINodes[nodeIndex].transform;
                     logger.LogInfo($"{__instance.gameObject.name} spawned inside; Switching to interior AI. Setting Favorite Spot to {__instance.favoriteSpot}.");
                 }
+
             }
         }
 
@@ -103,7 +122,7 @@ namespace StarlancerAIFix.Patches
 
         private static void SubtractPowerLevelPatch(EnemyAI __instance) //When an enemy dies, subtracts its power level from the correct list.
         {
-            if (RoundManager.Instance.currentLevel.OutsideEnemies.Any(enemy => enemy.enemyType == __instance.enemyType) || RoundManager.Instance.WeedEnemies.Any(enemy => enemy.enemyType == __instance.enemyType)) //Outside & Weeds
+            if (RoundManager.Instance.currentLevel.OutsideEnemies.Any(enemy => enemy.enemyType == __instance.enemyType) /*|| RoundManager.Instance.WeedEnemies.Any(enemy => enemy.enemyType == __instance.enemyType)*/) //Outside & Weeds
             {
                 logger.LogInfo($"{__instance.gameObject.name} from the exterior enemy list has died; \nPrevious exterior power level is {RoundManager.Instance.currentOutsideEnemyPower}");
 
