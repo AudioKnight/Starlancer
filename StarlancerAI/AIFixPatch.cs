@@ -59,11 +59,13 @@ namespace StarlancerAIFix.Patches
             {
                 __instance.SetEnemyOutside(true);
             }
+
             else
             {
                 Vector3 enemyPos = __instance.transform.position;
                 Vector3 closestOutsideNode = Vector3.positiveInfinity;
                 Vector3 closestInsideNode = Vector3.positiveInfinity;
+
                 for (int i = 0; i < outsideNodePositions.Length; i++) //Cache outside node positions.
                 {
                     if ((outsideNodePositions[i] - enemyPos).sqrMagnitude < (closestOutsideNode - enemyPos).sqrMagnitude)
@@ -77,7 +79,6 @@ namespace StarlancerAIFix.Patches
                     {
                         closestInsideNode = insideNodePositions[i];
                     }
-
                 }
 
                 if (!__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude)) //Set isOutside true if the enemy is outside.
@@ -94,24 +95,6 @@ namespace StarlancerAIFix.Patches
                     __instance.favoriteSpot = __instance.allAINodes[nodeIndex].transform;
                     logger.LogInfo($"{__instance.gameObject.name} spawned inside; Switching to interior AI. Setting Favorite Spot to {__instance.favoriteSpot}.");
                 }
-
-                }
-    
-                if (!__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude < (closestInsideNode - enemyPos).sqrMagnitude)) //Set isOutside true if the enemy is outside.
-                {
-                    __instance.SetEnemyOutside(true);
-                    int nodeIndex = UnityEngine.Random.Range(0, __instance.allAINodes.Length - 1);
-                    __instance.favoriteSpot = __instance.allAINodes[nodeIndex].transform;
-                    logger.LogInfo($"{__instance.gameObject.name} spawned outside; Switching to exterior AI. Setting Favorite Spot to {__instance.favoriteSpot}.");
-                }
-                else if (__instance.isOutside && ((closestOutsideNode - enemyPos).sqrMagnitude > (closestInsideNode - enemyPos).sqrMagnitude)) //Set isOutside false if the enemy is inside.
-                {
-                    __instance.SetEnemyOutside(false);
-                    int nodeIndex = UnityEngine.Random.Range(0, __instance.allAINodes.Length - 1);
-                    __instance.favoriteSpot = __instance.allAINodes[nodeIndex].transform;
-                    logger.LogInfo($"{__instance.gameObject.name} spawned inside; Switching to interior AI. Setting Favorite Spot to {__instance.favoriteSpot}.");
-                }
-
             }
         }
 
@@ -426,7 +409,7 @@ namespace StarlancerAIFix.Patches
         {
             if (Array.IndexOf(enemyWhitelist, __instance.enemyType.name) != -1)
             {
-                logger.LogInfo($"The Enemy Whitelist contains: {string.Join(", ", enemyWhitelist)}");
+                logger.LogInfo($"The Enemy Whitelist contains: {string.Join(", ", enemyWhitelist)}.");
 
                 IVisibleThreat threatAlreadyExists = __instance.GetComponentInChildren<IVisibleThreat>();
                 if (threatAlreadyExists != null) { return; } //Do nothing if an IVisibleThreat component somehow exists already.
