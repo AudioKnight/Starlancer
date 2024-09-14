@@ -12,7 +12,7 @@ namespace StarlancerAIFix
     {
         private const string modGUID = "AudioKnight.StarlancerAIFix";
         private const string modName = "Starlancer AI Fix";
-        private const string modVersion = "3.8.0";
+        private const string modVersion = "3.8.2";
 
         private readonly Harmony harmony = new Harmony(modGUID);
 
@@ -34,7 +34,7 @@ namespace StarlancerAIFix
             harmony.PatchAll(typeof(StarlancerAIFixBase));
             harmony.PatchAll(typeof(AIFix));
 
-            foreach (var plugin in Chainloader.PluginInfos)
+            /*foreach (var plugin in Chainloader.PluginInfos)
             {
                 var metadata = plugin.Value.Metadata;
                 if (metadata.GUID.Equals("xCeezy.LethalEscape"))
@@ -43,7 +43,7 @@ namespace StarlancerAIFix
                     harmony.Unpatch(typeof(JesterAI).GetMethod("Update"), HarmonyPatchType.Postfix, "LethalEscape");
                     break;
                 }
-            }
+            }*/
         }
     }
 }
