@@ -13,7 +13,7 @@ namespace StarlancerEnemyEscape
     {
         private const string modGUID = "AudioKnight.StarlancerEnemyEscape";
         private const string modName = "Starlancer EnemyEscape";
-        private const string modVersion = "2.5.0";
+        private const string modVersion = "2.5.6";
 
         private readonly Harmony harmony = new Harmony(modGUID);
         public static StarlancerEnemyEscapeBase Instance;
@@ -49,7 +49,7 @@ namespace StarlancerEnemyEscape
             logger.LogInfo("Starlancer is allowing enemies to roam.");
 
             configEscapePreset = Config.Bind("EnemyEscape", "EscapePreset", ConfigPreset.ReasonableDefaults, new ConfigDescription("Which preset to use. If an enemy has a value manually set below, it will take priority." +
-                "\nReasonableDefaults: Blob:0, Bunker Spider:10, Butler:5, Butler Bees:5, Centipede:0, Crawler:10, Flowerman:10, Hoarding bug:10, Jester:1, Nutcracker:5, Puffer:10, Spring:5, Baboon hawk:15, Earth Leviathan:0, ForestGiant:0, MouthDog:0, RadMech:0, Red Locust Bees:5" +
+                "\nReasonableDefaults: Blob:2, Bunker Spider:10, Butler:5, Butler Bees:5, Centipede:0, Crawler:10, Flowerman:10, Hoarding bug:10, Jester:1, Nutcracker:5, Puffer:10, Spring:5, Baboon hawk:15, Earth Leviathan:1, ForestGiant:0, MouthDog:0, RadMech:0, Tulip Snake:5, Clay Surgeon:5, Maneater:1" +
                 "\nDisabled: All 0s, Minimal: All 1s, Chaos: All 100s (Use at your own risk)"));
 
             harmony.PatchAll(typeof(StarlancerEnemyEscapeBase));

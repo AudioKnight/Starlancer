@@ -156,9 +156,12 @@ namespace StarlancerAIFix.Patches
 
                 case 2:
 
-                    if (__instance.targetingPlayer && ((!__instance.isOutside && !__instance.targetPlayer.isInsideFactory) || (__instance.isOutside && __instance.targetPlayer.isInsideFactory))) //Allows the Jester to end hostilities if there are no players in its area.
+                    if (__instance.targetPlayer != null)
                     {
-                        __instance.targetPlayer = null;
+                        if (__instance.targetingPlayer && ((!__instance.isOutside && !__instance.targetPlayer.isInsideFactory) || (__instance.isOutside && __instance.targetPlayer.isInsideFactory))) //Allows the Jester to end hostilities if there are no players in its area.
+                        {
+                            __instance.targetPlayer = null;
+                        }
                     }
 
                     if (__instance.isOutside) //A copy of some vanilla Jester code, but with flipped logic so that it works outside.
@@ -179,6 +182,7 @@ namespace StarlancerAIFix.Patches
                         }
 
                         ___targetingPlayer = false;
+
                         for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
                         {
                             if (StartOfRound.Instance.allPlayerScripts[i].isPlayerControlled && !StartOfRound.Instance.allPlayerScripts[i].isInsideFactory)
@@ -264,6 +268,77 @@ namespace StarlancerAIFix.Patches
             {
                 __instance.currentBehaviourStateIndex = 1;
             }
+        }
+
+        //====================================================================================================================================================================================
+        [HarmonyPatch(typeof(SandSpiderAI), "Update")]
+        [HarmonyPostfix]
+
+        private static void SandSpiderMeshReposition(SandSpiderAI __instance) //Body and Mind become One
+        {
+            if (__instance.agent.speed > 0)
+            {
+                __instance.meshContainerPosition = __instance.agent.transform.position;
+                __instance.meshContainerTarget = __instance.meshContainerPosition;
+            }
+        }
+
+
+        //====================================================================================================================================================================================
+
+        [HarmonyPatch(typeof(ButlerEnemyAI), "Update")]
+        [HarmonyPostfix]
+
+        private static void ButlerMusicOutside(ButlerEnemyAI __instance) //Flipped logic to allow butler music to play outside.
+        {
+            switch (__instance.currentBehaviourStateIndex)
+            {
+                case 2:
+                    {
+                        if (__instance.isOutside && !__instance.startedMurderMusic)
+                        {
+                            if (!GameNetworkManager.Instance.localPlayerController.isInsideFactory && GameNetworkManager.Instance.localPlayerController.HasLineOfSightToPosition(__instance.transform.position + Vector3.up * 0.7f, 100f, 18, 1f))
+                            {
+                                __instance.startedMurderMusic = true;
+                            }
+                            break;
+                        }
+                        __instance.ambience1.volume = Mathf.Lerp(__instance.ambience1.volume, 0f, Time.deltaTime * 7f);
+                        if (__instance.isOutside && !GameNetworkManager.Instance.localPlayerController.isInsideFactory)
+                        {
+                            if (GameNetworkManager.Instance.localPlayerController.HasLineOfSightToPosition(__instance.transform.position + Vector3.up * 0.7f, 100f, 18, 1f))
+                            {
+                                ButlerEnemyAI.murderMusicVolume = Mathf.Max(ButlerEnemyAI.murderMusicVolume, Mathf.Lerp(ButlerEnemyAI.murderMusicVolume, 0.7f, Time.deltaTime * 3f));
+                            }
+                            else
+                            {
+                                ButlerEnemyAI.murderMusicVolume = Mathf.Max(ButlerEnemyAI.murderMusicVolume, Mathf.Lerp(ButlerEnemyAI.murderMusicVolume, 0.36f, Time.deltaTime * 3f));
+                            }
+                            ButlerEnemyAI.increaseMurderMusicVolume = true;
+                        }
+                        if (__instance.ambience1.isPlaying && __instance.ambience1.volume <= 0.01f)
+                        {
+                            __instance.ambience1.Stop();
+                        }
+                        if (!ButlerEnemyAI.murderMusicAudio.isPlaying)
+                        {
+                            ButlerEnemyAI.murderMusicAudio.Play();
+                        }
+                    }
+                    break;
+            }
+            
+        }
+
+        //====================================================================================================================================================================================
+        
+        [HarmonyPatch(typeof(RedLocustBees), "Start")]
+        [HarmonyPostfix]
+
+        private static void DoNotGrabHive(RedLocustBees __instance)
+        {
+            //Debug.LogWarning("hello");
+            __instance.hive.grabbableToEnemies = false;
         }
 
         //====================================================================================================================================================================================

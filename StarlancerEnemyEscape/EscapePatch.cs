@@ -2,12 +2,15 @@
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.InputSystem.Utilities;
 using static StarlancerAIFix.Patches.AIFix;
 using static StarlancerEnemyEscape.StarlancerEnemyEscapeBase;
 using Random = System.Random;
 
 namespace EnemyEscape
 {
+
+
     internal class StarlancerEscapeComponent : MonoBehaviour
     {
         private const int UpdateInterval = 1;
@@ -19,16 +22,20 @@ namespace EnemyEscape
         private const int cooldownTimeDefault = 30;
 
         internal static EntranceTeleport[] entranceTeleports;
-        internal static EntranceTeleport[] outsideTeleports;
-        internal static EntranceTeleport[] insideTeleports;
+        internal static List<EntranceTeleport> outsideTeleports = [];
+        internal static List<EntranceTeleport> insideTeleports = [];
         internal static List<EnemyAI> enemiesThatCanEscape = [];
+
+        internal static bool isSomethingBroken;
+        internal static bool isMineshaft;
 
         internal int chanceToEscape;    //Config per enemy, [-1(preset) - 100]
         internal int interiorPathRange; //20 default, config range [10 - 9999]
         internal int exteriorPathRange; //200 default, config range [50 - 9999]
         internal int pathCooldownTime;  //30 default, config int range [10 - 300] (10 seconds up to 5 minutes)
-
+        
         private bool ignoreStateCheck;
+        private bool preventPathing;
         private bool pathingToTeleport;
         private bool teleportFound;
         private bool closeToTeleport;
@@ -76,7 +83,7 @@ namespace EnemyEscape
             if (chanceToEscape == 0)
             {
                 logger.LogInfo($"ChanceToEscape is 0, removing EscapeComponent from {gameObject.name}");
-                Destroy(enemy.GetComponent<StarlancerEscapeComponent>());
+                Destroy(this);
             }
             else
             {
@@ -96,8 +103,11 @@ namespace EnemyEscape
                 pathRange = interiorPathRange;
             }
 
+            if (enemy is FlowermanAI) { preventPathing = true; } //The Bracken doesn't want to path to an entrance when it's alone in the facility. Until or unless I transpile its DoAIInterval(), I'd rather the random pathing not eat up CPU.
+
+            //== CIRCUIT BEES == : Rework later
             //Ignore (currentBehaviourStateIndex != 0) check
-            if (enemy.GetType() == typeof(RedLocustBees)) { ignoreStateCheck = true; }
+            //if (enemy is RedLocustBees) { ignoreStateCheck = true; }
         }
 
 
@@ -105,27 +115,37 @@ namespace EnemyEscape
 
         private void Update()
         {
-            if (enemy.isEnemyDead) { Destroy(enemy.GetComponent<StarlancerEscapeComponent>()); }
+            if (enemy.isEnemyDead || StartOfRound.Instance.allPlayersDead || RoundManager.Instance.playersManager.livingPlayers == 0) { Destroy(this); }
 
             if ((Time.time - lastTeleportCheck) <= UpdateInterval) { return; }
 
             lastTeleportCheck = Time.time;
 
-            if (!ignoreStateCheck && enemy.currentBehaviourStateIndex != 0) { lastPathAttempt += Time.deltaTime; } //Pause the cooldown if not in state 0 and ignoreStateZero is false
+            if (!ignoreStateCheck && enemy.currentBehaviourStateIndex != 0) { lastPathAttempt += Time.deltaTime; } //Pause the cooldown if not in state 0 and ignoreStateCheck is false
 
             if ((Time.time - lastPathAttempt) > pathCooldownTime || pathingToTeleport) //Attempt to path to a nearby entrance.
             {
                 //=========== EnemyType Specific ============
 
-                if (enemy is FlowermanAI) { return; } //The Bracken doesn't want to path to an entrance when it's alone in the facility. Until or unless I transpile its DoAIInterval(), I'd rather the random pathing not eat up CPU.
-                else if (enemy is HoarderBugAI hoarderBugAI) //Prevents random pathing when a lootbug is holding an item so it doesn't get confused.
+                if (enemy is HoarderBugAI hoarderBugAI) //Prevents random pathing when holding an item so it doesn't get confused.
                 {
                     if (hoarderBugAI.heldItem != null)
                     {
-                        enemy.SetDestinationToPosition(hoarderBugAI.nestPosition);
-                        lastPathAttempt += Time.deltaTime;
-                        return;
+                        //logger.LogWarning($"Lootbug code.");
+                        pathingToTeleport = false;
+                        preventPathing = true;
                     }
+                    else { preventPathing = false; }
+                }
+                else if (enemy is BaboonBirdAI baboon) //Prevents random pathing when holding an item so it doesn't get confused.
+                {
+                    if (baboon.heldScrap != null || baboon.focusedScrap != null)
+                    {
+                        //logger.LogWarning($"Baboon code.");
+                        pathingToTeleport = false;
+                        preventPathing = true;
+                    }
+                    else { preventPathing = false; }
                 }
 
                 //===========================================
@@ -135,7 +155,7 @@ namespace EnemyEscape
                     enemy.SetDestinationToPosition(closestTeleportPosition);
                     enemy.agent.SetDestination(closestTeleportPosition);
 
-                    if (enemy is SandSpiderAI sandSpiderAI) //New as of 09-02-2024
+                    if (enemy is SandSpiderAI sandSpiderAI)
                     {
                         Vector3 vector = sandSpiderAI.meshContainerPosition;
                         sandSpiderAI.meshContainerPosition = Vector3.MoveTowards(sandSpiderAI.meshContainerPosition, closestTeleportPosition, sandSpiderAI.spiderSpeed * Time.deltaTime);
@@ -143,12 +163,19 @@ namespace EnemyEscape
                         sandSpiderAI.meshContainer.position = sandSpiderAI.meshContainerPosition;
                         sandSpiderAI.meshContainer.rotation = Quaternion.Lerp(sandSpiderAI.meshContainer.rotation, sandSpiderAI.meshContainerTargetRotation, 8f * Time.deltaTime);
                     }
-
+                    else if (enemy is BaboonBirdAI baboonBirdAI)
+                    {
+                        baboonBirdAI.scoutTimer = 0;
+                    }
                 }
-                else if (random.Next(0, 100) <= chanceToEscape) 
+                else if (random.Next(0, 100) <= chanceToEscape && !preventPathing) 
                 {
                     foreach (EntranceTeleport teleport in entranceTeleports)
                     {
+                        if (!teleport.FindExitPoint()) { continue; } //Extra check for broken EntranceTeleport.
+
+                        if (isMineshaft && teleport.entranceId == 0 && teleport.isEntranceToBuilding) { continue; } //Don't path to Mineshaft main entrance.
+
                         NavMesh.CalculatePath(enemy.transform.position, teleport.entrancePoint.transform.position, enemy.agent.areaMask, pathToTeleport); //Check for a valid path to this entrance.
 
                         if (pathToTeleport.status != NavMeshPathStatus.PathComplete) { continue; }
@@ -178,13 +205,17 @@ namespace EnemyEscape
                         enemy.SetDestinationToPosition(closestTeleportPosition);
                         enemy.agent.SetDestination(closestTeleportPosition);
 
-                        if (enemy is SandSpiderAI sandSpiderAI) //New as of 09-02-2024
+                        if (enemy is SandSpiderAI sandSpiderAI)
                         {
                             Vector3 vector = sandSpiderAI.meshContainerPosition;
                             sandSpiderAI.meshContainerPosition = Vector3.MoveTowards(sandSpiderAI.meshContainerPosition, closestTeleportPosition, sandSpiderAI.spiderSpeed * Time.deltaTime);
                             sandSpiderAI.refVel = vector - sandSpiderAI.meshContainerPosition;
                             sandSpiderAI.meshContainer.position = sandSpiderAI.meshContainerPosition;
                             sandSpiderAI.meshContainer.rotation = Quaternion.Lerp(sandSpiderAI.meshContainer.rotation, sandSpiderAI.meshContainerTargetRotation, 8f * Time.deltaTime);
+                        }
+                        else if (enemy is BaboonBirdAI baboonBirdLeaveGroup)
+                        {
+                            baboonBirdLeaveGroup.LeaveCurrentScoutingGroup(true);
                         }
 
                     }
@@ -193,7 +224,6 @@ namespace EnemyEscape
             }
 
             //====================================================================================================================================================================================
-
 
             if ((Time.time - lastTeleportTime) < TeleportCooldownTime) { return; }
 
@@ -205,6 +235,7 @@ namespace EnemyEscape
                     {
                         if (Vector3.Distance(enemy.transform.position, teleport.entrancePoint.transform.position) < TeleportRange)
                         {
+                            closestTeleport = teleport;
                             closeToTeleport = true;
                         }
                     }
@@ -215,107 +246,74 @@ namespace EnemyEscape
                     {
                         if (Vector3.Distance(enemy.transform.position, teleport.entrancePoint.transform.position) < TeleportRange)
                         {
+                            closestTeleport = teleport;
                             closeToTeleport = true;
                         }
                     }
                 }
             }
-            
-            if (enemy.isOutside && ((Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport)) //Run through the list of teleporter IDs to warp to the matching inside teleport.
+
+            if ((Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport) //Run through the list of teleporter IDs to warp to the matching inside teleport.
             {
-                for (int i = 0; i < outsideTeleports.Length; i++)
-                {
-                    if (Vector3.Distance(outsideTeleports[i].entrancePoint.transform.position, enemy.transform.position) <= TeleportRange)
-                    {
-                        //TeleportAndRefresh();
-                        enemy.agent.Warp(insideTeleports[i].entrancePoint.transform.position);
-                        enemy.SetEnemyOutside(false);
-                        pathRange = interiorPathRange;
-                        enemy.favoriteSpot = insideFavoriteSpot;
-                        TeleportAndRefresh();
-
-
-                        /*//=========== EnemyType Specific ============
-                        if (enemy is BaboonBirdAI baboonBirdAI)
-                        {
-                            baboonBirdAI.StartSearch(enemy.transform.position, baboonBirdAI.scoutingSearchRoutine);
-                            baboonBirdAI.scoutingSearchRoutine.unsearchedNodes = baboonBirdAI.allAINodes.ToList();
-                        }
-                        else if (enemy is HoarderBugAI hoarderBugAI)
-                        {
-                            hoarderBugAI.StartSearch(hoarderBugAI.transform.position, hoarderBugAI.searchForItems);
-                            hoarderBugAI.searchForItems.unsearchedNodes = hoarderBugAI.allAINodes.ToList();
-                        }
-                        else if (enemy is CrawlerAI crawlerAI)
-                        {
-                            crawlerAI.StartSearch(enemy.transform.position, crawlerAI.searchForPlayers);
-                        }
-                        else if (enemy is SpringManAI springManAI)
-                        {
-                            springManAI.StartSearch(enemy.transform.position, springManAI.searchForPlayers);
-                        }
-                        else if (enemy is BlobAI blobAI)
-                        {
-                            blobAI.StartSearch(enemy.transform.position, blobAI.searchForPlayers);
-                            blobAI.centerPoint.position = insideTeleports[i].entrancePoint.transform.position; //Thanks Niro!
-                        }
-                        else if (enemy is SandSpiderAI sandSpiderAI)
-                        {
-                            sandSpiderAI.meshContainer.position = insideTeleports[i].entrancePoint.transform.position; //Thanks Niro!
-                            sandSpiderAI.homeNode = insideFavoriteSpot;
-                            sandSpiderAI.StartSearch(sandSpiderAI.homeNode.position, sandSpiderAI.patrolHomeBase);
-                        }
-                        *//*else if (enemy is RedLocustBees redLocustBeesAI)
-                        {
-                            redLocustBeesAI.StartSearch(enemy.transform.position, redLocustBeesAI.searchForHive);
-                        }*//*
-                        else { enemy.StartSearch(enemy.transform.position); }
-
-                        //===========================================
-
-                        return;*/
-                    }
-                }
+                TeleportAndRefresh();
+                return;
             }
-            else if (!enemy.isOutside && (Vector3.Distance(enemy.transform.position, closestTeleportPosition) <= TeleportRange) || closeToTeleport) //Run through the list of teleporter IDs to warp to the matching outside teleport.
-            {
-                for (int i = 0; i < insideTeleports.Length; i++)
-                {
-                    if (Vector3.Distance(insideTeleports[i].entrancePoint.transform.position, enemy.transform.position) <= TeleportRange)
-                    {
-                        enemy.agent.Warp(outsideTeleports[i].entrancePoint.transform.position);
-                        enemy.SetEnemyOutside(true);
-                        pathRange = exteriorPathRange;
-                        enemy.favoriteSpot = outsideFavoriteSpot;
 
-                        if (enemy is BlobAI blobAI)
-                        {
-                            blobAI.centerPoint.position = outsideTeleports[i].entrancePoint.transform.position; //Thanks Niro!
-                            for (int j = 0; j < blobAI.maxDistanceForSlimeRays.Length; j++)
-                            {
-                                blobAI.maxDistanceForSlimeRays[j] = 3.7f;
-                                blobAI.SlimeBonePositions[j] = blobAI.SlimeBones[j].transform.position;
-                            }
-                        }
-                        else if (enemy is SandSpiderAI sandSpiderAI)
-                        {
-                            logger.LogInfo($"Spider-specific code is running.");
-                            sandSpiderAI.meshContainerPosition = outsideTeleports[i].entrancePoint.transform.position; //Thanks Niro!
-                            sandSpiderAI.meshContainerTarget = sandSpiderAI.meshContainerPosition; //Thanks Niro!
-                        }
-
-                        TeleportAndRefresh();
-
-                        return;
-                    }
-                }
-            }
         }
 
         //====================================================================================================================================================================================
 
         private void TeleportAndRefresh()
         {
+            if (enemy.isOutside)
+            {
+                /*if (insideTeleports == null) { logger.LogError($"insideTeleports is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
+                else if (closestTeleport == null) { logger.LogError($"closestTeleport is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
+                else if (insideTeleports[closestTeleport.entranceId] == null) { logger.LogError($"insideTeleports[closestTeleport.entranceId] is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
+                else if (insideTeleports[closestTeleport.entranceId].entrancePoint == null) { logger.LogError($"insideTeleports[closestTeleport.entranceId].entrancePoint is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
+                else if (insideTeleports[closestTeleport.entranceId].entrancePoint.position == null) { logger.LogError($"insideTeleports[closestTeleport.entranceId].entrancePoint.position is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }*/
+                
+                logger.LogInfo($"Warping {enemy.name} inside.");
+                enemy.agent.Warp(insideTeleports[closestTeleport.entranceId].entrancePoint.position);
+                enemy.SetEnemyOutside(false);
+                pathRange = interiorPathRange;
+                enemy.favoriteSpot = insideFavoriteSpot;
+            }
+            else if (!enemy.isOutside)
+            {
+                /*if (outsideTeleports == null) { logger.LogError($"outsideTeleports is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
+                else if (closestTeleport == null) { logger.LogError($"closestTeleport is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
+                else if (outsideTeleports[closestTeleport.entranceId] == null) { logger.LogError($"outsideTeleports[closestTeleport.entranceId] is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
+                else if (outsideTeleports[closestTeleport.entranceId].entrancePoint == null) { logger.LogError($"outsideTeleports[closestTeleport.entranceId].entrancePoint is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
+                else if (outsideTeleports[closestTeleport.entranceId].entrancePoint.position == null) { logger.LogError($"outsideTeleports[closestTeleport.entranceId].entrancePoint.position is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }*/
+
+                logger.LogInfo($"Warping {enemy.name} outside.");
+                enemy.agent.Warp(outsideTeleports[closestTeleport.entranceId].entrancePoint.position);
+                enemy.SetEnemyOutside(true);
+                pathRange = exteriorPathRange;
+                enemy.favoriteSpot = outsideFavoriteSpot;
+            }
+
+            //=========== EnemyType Specific ============
+            if (enemy is BlobAI blobAI)
+            {
+                blobAI.centerPoint.position = enemy.agent.transform.position; //closestTeleport.exitPoint.position;
+                for (int j = 0; j < blobAI.maxDistanceForSlimeRays.Length; j++)
+                {
+                    blobAI.maxDistanceForSlimeRays[j] = 3.7f;
+                    blobAI.SlimeBonePositions[j] = blobAI.SlimeBones[j].transform.position;
+                }
+            }
+            /*else if (enemy is SandSpiderAI sandSpiderAI)
+            {
+                //logger.LogInfo($"Spider-specific code is running.");
+                sandSpiderAI.meshContainerPosition = enemy.agent.transform.position; //closestTeleport.exitPoint.position;
+                sandSpiderAI.meshContainerTarget = sandSpiderAI.meshContainerPosition;
+                sandSpiderAI.webTraps.Clear();
+            }*/
+
+            //===========================================
+
             closeToTeleport = false;
             lastTeleportTime = Time.time;
             prevPathDistance = float.PositiveInfinity;
@@ -327,15 +325,25 @@ namespace EnemyEscape
             enemy.DoAIInterval();
 
             //=========== EnemyType Specific ============
-            if (enemy is BaboonBirdAI baboonBirdAI)
+            AISearchRoutine newRoutine = enemy switch
             {
-                baboonBirdAI.StartSearch(enemy.transform.position, baboonBirdAI.scoutingSearchRoutine);
-                baboonBirdAI.scoutingSearchRoutine.unsearchedNodes = baboonBirdAI.allAINodes.ToList();
+                BaboonBirdAI baboonBird => baboonBird.scoutingSearchRoutine,
+                HoarderBugAI hoarderBugAI => hoarderBugAI.searchForItems,
+                BlobAI blobAIRoutine => blobAIRoutine.searchForPlayers,
+                SandSpiderAI sandSpiderAIRoutine => sandSpiderAIRoutine.patrolHomeBase,
+                //RedLocustBees redLocustBeesAI => redLocustBeesAI.searchForHive, //Unimplemented for now, reworking later
+                _ => new AISearchRoutine()
+            };
+
+            if (enemy is BaboonBirdAI baboon)
+            {
+                baboon.scoutingSearchRoutine.unsearchedNodes = baboon.allAINodes.ToList();
+                if (baboon.heldScrap != null) { return; }
             }
-            else if (enemy is HoarderBugAI hoarderBugAI)
+            else if (enemy is HoarderBugAI hoarder)
             {
-                hoarderBugAI.StartSearch(hoarderBugAI.transform.position, hoarderBugAI.searchForItems);
-                hoarderBugAI.searchForItems.unsearchedNodes = hoarderBugAI.allAINodes.ToList();
+                hoarder.searchForItems.unsearchedNodes = hoarder.allAINodes.ToList();
+                if (hoarder.heldItem != null) { return; }
             }
             else if (enemy is CrawlerAI crawlerAI)
             {
@@ -345,24 +353,12 @@ namespace EnemyEscape
             {
                 springManAI.StartSearch(enemy.transform.position, springManAI.searchForPlayers);
             }
-            else if (enemy is BlobAI blobAI)
+            else if (enemy is SandSpiderAI spider)
             {
-                //blobAI.centerPoint.position = enemy.agent.transform.position; //Thanks Niro!
-                blobAI.StartSearch(enemy.transform.position, blobAI.searchForPlayers);
+                spider.homeNode = enemy.favoriteSpot;
             }
-            else if (enemy is SandSpiderAI sandSpiderAI)
-            {
-                logger.LogInfo($"Spider-specific code is running.");
-                /*sandSpiderAI.meshContainerPosition = sandSpiderAI.agent.transform.position; //Thanks Niro!
-                sandSpiderAI.meshContainerTarget = sandSpiderAI.agent.transform.position; //Thanks Niro!*/
-                sandSpiderAI.homeNode = enemy.favoriteSpot;
-                sandSpiderAI.StartSearch(sandSpiderAI.homeNode.position, sandSpiderAI.patrolHomeBase);
-            }
-            /*else if (enemy is RedLocustBees redLocustBeesAI)
-            {
-                redLocustBeesAI.StartSearch(enemy.transform.position, redLocustBeesAI.searchForHive);
-            }*/
-            else { enemy.StartSearch(enemy.transform.position); }
+
+            enemy.StartSearch(enemy.transform.position, newRoutine);
 
             //===========================================
         }
@@ -412,6 +408,10 @@ namespace EnemyEscape
                         new ConfigDescription($"Length of the cooldown between attempts at pathing to a nearby EntranceTeleport for {__instance.enemyType.enemyName}.",
                         new AcceptableValueRange<int>(10, 9999)));
                 }
+            }
+            if (isSomethingBroken)
+            {
+                return;
             }
 
             if (insideAINodes.Length != 0 && __instance.gameObject.GetComponent<StarlancerEscapeComponent>() == null) //Add the Escape Component
@@ -478,57 +478,74 @@ namespace EnemyEscape
 
         private static void EntranceTeleportsAndAINodes()
         {
+            isSomethingBroken = false;
+            isMineshaft = false;
+
             enemiesThatCanEscape.Clear();
+            outsideTeleports.Clear();
+            insideTeleports.Clear();
 
-            if (entranceTeleports == null || entranceTeleports.Length == 0 || entranceTeleports[0] == null) //Find all EntranceTeleports
+            if (RoundManager.Instance.currentLevel.sceneName != "CompanyBuilding" && RoundManager.Instance.dungeonGenerator == null && RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow == null)
             {
-                entranceTeleports = FindObjectsOfType<EntranceTeleport>();
-                outsideTeleports = new EntranceTeleport[entranceTeleports.Length / 2];
-                insideTeleports = new EntranceTeleport[entranceTeleports.Length / 2];
-                for (int i = 0; i < entranceTeleports.Length; i++)
-                {
-                    int entranceID = entranceTeleports[i].entranceId;
-
-                    if (entranceTeleports[i].isEntranceToBuilding)
-                    {
-                        outsideTeleports[entranceID] = entranceTeleports[i];
-                        logger.LogInfo("Finding exterior EntranceTeleports.");
-                    }
-                    else
-                    {
-                        insideTeleports[entranceID] = entranceTeleports[i];
-                        logger.LogInfo("Finding interior EntranceTeleports.");
-                    }
-                }
+                isSomethingBroken = true;
+                logger.LogError($"Something related to dungeon generation is null. Aborting registration of EntranceTeleports and disabling escape functionality for this round. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon.");
+                return;
             }
 
-            /*for (int i = 0; i < entranceTeleports.Length; i++) //Instantiate AI and SpawnDenial nodes at each EntranceTeleport
-                                                                 //Disabled. These nodes no longer serve any functional purpose, and they can make outside Brackens camp fire exits on some moons
+            if (RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name == "Level3Flow") { isMineshaft = true; }
+
+            entranceTeleports = FindObjectsByType<EntranceTeleport>(FindObjectsSortMode.None); //Find all EntranceTeleports
+
+            for (int i = 0; i < entranceTeleports.Length; i++)
             {
+                int entranceID = entranceTeleports[i].entranceId;
+
                 if (entranceTeleports[i].isEntranceToBuilding)
                 {
-                    var entranceNode = new GameObject();
-                    entranceNode.name = $"EnemyEscapeEntranceNode ({entranceTeleports[i].name})";
-                    entranceNode.tag = "OutsideAINode";
-                    entranceNode.transform.SetParent(entranceTeleports[i].entrancePoint, false);
-                    RoundManager.Instance.outsideAINodes.AddItem(entranceNode);
+                    if (!entranceTeleports[i].FindExitPoint())
+                    {
+                        logger.LogError($"EntranceTeleport {entranceID} does not have a matching interior EntranceTeleport. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior.");
+                        isSomethingBroken = true;
+                        continue;
+                    }
+                    else if (entranceTeleports[i].entrancePoint == null)
+                    {
+                        logger.LogError($"EntranceTeleport {entranceID} does not have an entrancePoint. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon.");
+                        isSomethingBroken = true;
+                        continue;
+                    }
 
-                    var spawnDenial = new GameObject();
-                    spawnDenial.name = $"EnemyEscapeEntranceSpawnDenial ({entranceTeleports[i].name})";
-                    spawnDenial.transform.SetParent(entranceNode.transform, false);
-                    spawnDenial.tag = "SpawnDenialPoint";
-                    RoundManager.Instance.spawnDenialPoints.AddItem(spawnDenial);
+                    outsideTeleports.Add(entranceTeleports[i]);
+                    outsideTeleports.Sort((entranceA, entranceB) => entranceA.entranceId.CompareTo(entranceB.entranceId));
+                    logger.LogInfo($"Registering exterior EntranceTeleport({entranceID}).");
                 }
                 else
                 {
-                    var entranceNode = new GameObject();
-                    entranceNode.name = $"EnemyEscapeEntranceNode ({entranceTeleports[i].name})";
-                    entranceNode.tag = "AINode";
-                    entranceNode.transform.SetParent(entranceTeleports[i].entrancePoint, false);
-                    RoundManager.Instance.insideAINodes.AddItem(entranceNode);
+                    if (!entranceTeleports[i].FindExitPoint())
+                    {
+                        logger.LogError($"EntranceTeleport {entranceID} does not have a matching exterior EntranceTeleport. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon.");
+                        isSomethingBroken = true;
+                        continue;
+                    }
+                    else if (entranceTeleports[i].entrancePoint == null)
+                    {
+                        logger.LogError($"EntranceTeleport {entranceID} does not have an entrancePoint. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior.");
+                        isSomethingBroken = true;
+                        continue;
+                    }
+
+                    insideTeleports.Add(entranceTeleports[i]);
+                    insideTeleports.Sort((entranceA, entranceB) => entranceA.entranceId.CompareTo(entranceB.entranceId));
+                    logger.LogInfo($"Registering interior EntranceTeleport({entranceID}).");
+
                 }
-                
-            }*/
+            }
+
+            if (isSomethingBroken)
+            {
+                logger.LogWarning($"Escaping is disabled for this round as there is an issue with the EntranceTeleports. Please see the error logged above.");
+            }
+
         }
 
         //====================================================================================================================================================================================
@@ -540,6 +557,7 @@ namespace EnemyEscape
         {
             if (enemiesThatCanEscape.Contains(__instance))
             {
+                StarlancerEscapeComponent setDestinationEscapeComponent = __instance.GetComponent<StarlancerEscapeComponent>();
                 bool destinationInOtherArea = false;
                 NavMeshPath pathToTeleport = new NavMeshPath();
                 float prevPathDistance = float.PositiveInfinity;
@@ -609,7 +627,7 @@ namespace EnemyEscape
                                 prevPathDistance = pathDistance;
                                 checkForPath = false;
                                 position = teleport.entrancePoint.transform.position;
-                                __instance.destination = position; ;
+                                __instance.destination = position;
                             }
                         }
                     }
