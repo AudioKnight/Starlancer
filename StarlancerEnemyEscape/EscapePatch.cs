@@ -115,7 +115,7 @@ namespace EnemyEscape
 
         private void Update()
         {
-            if (enemy.isEnemyDead) { Destroy(this); }
+            if (enemy.isEnemyDead || StartOfRound.Instance.allPlayersDead || RoundManager.Instance.playersManager.livingPlayers == 0) { Destroy(this); }
 
             if ((Time.time - lastTeleportCheck) <= UpdateInterval) { return; }
 
@@ -172,9 +172,9 @@ namespace EnemyEscape
                 {
                     foreach (EntranceTeleport teleport in entranceTeleports)
                     {
-                        if (!teleport.FindExitPoint()) { continue; }
+                        if (!teleport.FindExitPoint()) { continue; } //Extra check for broken EntranceTeleport.
 
-                        if (isMineshaft && teleport.entranceId == 0 && teleport.isEntranceToBuilding) { continue; }
+                        if (isMineshaft && teleport.entranceId == 0 && teleport.isEntranceToBuilding) { continue; } //Don't path to Mineshaft main entrance.
 
                         NavMesh.CalculatePath(enemy.transform.position, teleport.entrancePoint.transform.position, enemy.agent.areaMask, pathToTeleport); //Check for a valid path to this entrance.
 
@@ -213,6 +213,10 @@ namespace EnemyEscape
                             sandSpiderAI.meshContainer.position = sandSpiderAI.meshContainerPosition;
                             sandSpiderAI.meshContainer.rotation = Quaternion.Lerp(sandSpiderAI.meshContainer.rotation, sandSpiderAI.meshContainerTargetRotation, 8f * Time.deltaTime);
                         }
+                        else if (enemy is BaboonBirdAI baboonBirdLeaveGroup)
+                        {
+                            baboonBirdLeaveGroup.LeaveCurrentScoutingGroup(true);
+                        }
 
                     }
                 }
@@ -231,6 +235,7 @@ namespace EnemyEscape
                     {
                         if (Vector3.Distance(enemy.transform.position, teleport.entrancePoint.transform.position) < TeleportRange)
                         {
+                            closestTeleport = teleport;
                             closeToTeleport = true;
                         }
                     }
@@ -241,6 +246,7 @@ namespace EnemyEscape
                     {
                         if (Vector3.Distance(enemy.transform.position, teleport.entrancePoint.transform.position) < TeleportRange)
                         {
+                            closestTeleport = teleport;
                             closeToTeleport = true;
                         }
                     }
@@ -261,6 +267,12 @@ namespace EnemyEscape
         {
             if (enemy.isOutside)
             {
+                /*if (insideTeleports == null) { logger.LogError($"insideTeleports is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
+                else if (closestTeleport == null) { logger.LogError($"closestTeleport is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
+                else if (insideTeleports[closestTeleport.entranceId] == null) { logger.LogError($"insideTeleports[closestTeleport.entranceId] is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
+                else if (insideTeleports[closestTeleport.entranceId].entrancePoint == null) { logger.LogError($"insideTeleports[closestTeleport.entranceId].entrancePoint is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
+                else if (insideTeleports[closestTeleport.entranceId].entrancePoint.position == null) { logger.LogError($"insideTeleports[closestTeleport.entranceId].entrancePoint.position is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }*/
+                
                 logger.LogInfo($"Warping {enemy.name} inside.");
                 enemy.agent.Warp(insideTeleports[closestTeleport.entranceId].entrancePoint.position);
                 enemy.SetEnemyOutside(false);
@@ -269,6 +281,12 @@ namespace EnemyEscape
             }
             else if (!enemy.isOutside)
             {
+                /*if (outsideTeleports == null) { logger.LogError($"outsideTeleports is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
+                else if (closestTeleport == null) { logger.LogError($"closestTeleport is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
+                else if (outsideTeleports[closestTeleport.entranceId] == null) { logger.LogError($"outsideTeleports[closestTeleport.entranceId] is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
+                else if (outsideTeleports[closestTeleport.entranceId].entrancePoint == null) { logger.LogError($"outsideTeleports[closestTeleport.entranceId].entrancePoint is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
+                else if (outsideTeleports[closestTeleport.entranceId].entrancePoint.position == null) { logger.LogError($"outsideTeleports[closestTeleport.entranceId].entrancePoint.position is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }*/
+
                 logger.LogInfo($"Warping {enemy.name} outside.");
                 enemy.agent.Warp(outsideTeleports[closestTeleport.entranceId].entrancePoint.position);
                 enemy.SetEnemyOutside(true);
@@ -286,12 +304,13 @@ namespace EnemyEscape
                     blobAI.SlimeBonePositions[j] = blobAI.SlimeBones[j].transform.position;
                 }
             }
-            else if (enemy is SandSpiderAI sandSpiderAI)
+            /*else if (enemy is SandSpiderAI sandSpiderAI)
             {
                 //logger.LogInfo($"Spider-specific code is running.");
                 sandSpiderAI.meshContainerPosition = enemy.agent.transform.position; //closestTeleport.exitPoint.position;
                 sandSpiderAI.meshContainerTarget = sandSpiderAI.meshContainerPosition;
-            }
+                sandSpiderAI.webTraps.Clear();
+            }*/
 
             //===========================================
 
@@ -466,14 +485,14 @@ namespace EnemyEscape
             outsideTeleports.Clear();
             insideTeleports.Clear();
 
-            if (RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name == "Level3Flow") { isMineshaft = true; }
-
             if (RoundManager.Instance.currentLevel.sceneName != "CompanyBuilding" && RoundManager.Instance.dungeonGenerator == null && RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow == null)
             {
                 isSomethingBroken = true;
-                logger.LogError($"Something related to dungeon generation is null. Aborting registration of EntranceTeleports. Moon is {RoundManager.Instance.currentLevel.PlanetName} and Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}");
+                logger.LogError($"Something related to dungeon generation is null. Aborting registration of EntranceTeleports and disabling escape functionality for this round. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon.");
                 return;
             }
+
+            if (RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name == "Level3Flow") { isMineshaft = true; }
 
             entranceTeleports = FindObjectsByType<EntranceTeleport>(FindObjectsSortMode.None); //Find all EntranceTeleports
 
@@ -491,7 +510,7 @@ namespace EnemyEscape
                     }
                     else if (entranceTeleports[i].entrancePoint == null)
                     {
-                        logger.LogError($"EntranceTeleport {entranceID} does not have an entrancePoint. Moon is {RoundManager.Instance.currentLevel.PlanetName}, please report this error to the author of this moon.");
+                        logger.LogError($"EntranceTeleport {entranceID} does not have an entrancePoint. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon.");
                         isSomethingBroken = true;
                         continue;
                     }
@@ -504,7 +523,7 @@ namespace EnemyEscape
                 {
                     if (!entranceTeleports[i].FindExitPoint())
                     {
-                        logger.LogError($"EntranceTeleport {entranceID} does not have a matching exterior EntranceTeleport. Moon is {RoundManager.Instance.currentLevel.PlanetName}, please report this error to the author of this moon.");
+                        logger.LogError($"EntranceTeleport {entranceID} does not have a matching exterior EntranceTeleport. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon.");
                         isSomethingBroken = true;
                         continue;
                     }
@@ -538,6 +557,7 @@ namespace EnemyEscape
         {
             if (enemiesThatCanEscape.Contains(__instance))
             {
+                StarlancerEscapeComponent setDestinationEscapeComponent = __instance.GetComponent<StarlancerEscapeComponent>();
                 bool destinationInOtherArea = false;
                 NavMeshPath pathToTeleport = new NavMeshPath();
                 float prevPathDistance = float.PositiveInfinity;

@@ -13,7 +13,7 @@ namespace StarlancerEnemyEscape
     {
         private const string modGUID = "AudioKnight.StarlancerEnemyEscape";
         private const string modName = "Starlancer EnemyEscape";
-        private const string modVersion = "2.5.4";
+        private const string modVersion = "2.5.6";
 
         private readonly Harmony harmony = new Harmony(modGUID);
         public static StarlancerEnemyEscapeBase Instance;
