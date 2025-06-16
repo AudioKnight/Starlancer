@@ -12,6 +12,7 @@ namespace StarlancerAIFix.Patches
         public static Vector3[] outsideNodePositions;
         public static Vector3[] insideNodePositions;
         public static string[] enemyWhitelist = ["Blob", "Butler", "Centipede", "Crawler", "Flowerman", "HoarderBug", "Nutcracker", "SandSpider"];
+        public static string[] hiveMoons = ["Asteroid14Scene", "CollateralScene"];
 
         private static GameObject[] FindOutsideAINodes()
         {
@@ -271,7 +272,7 @@ namespace StarlancerAIFix.Patches
         }
 
         //====================================================================================================================================================================================
-        [HarmonyPatch(typeof(SandSpiderAI), "Update")]
+        /*[HarmonyPatch(typeof(SandSpiderAI), "Update")]
         [HarmonyPostfix]
 
         private static void SandSpiderMeshReposition(SandSpiderAI __instance) //Body and Mind become One
@@ -281,8 +282,8 @@ namespace StarlancerAIFix.Patches
                 __instance.meshContainerPosition = __instance.agent.transform.position;
                 __instance.meshContainerTarget = __instance.meshContainerPosition;
             }
-        }
-
+        }*/
+        //Disabled in favor of Fandovec03's SpiderPositionFix. Also it was breaking things apparently.
 
         //====================================================================================================================================================================================
 
@@ -337,8 +338,15 @@ namespace StarlancerAIFix.Patches
 
         private static void DoNotGrabHive(RedLocustBees __instance)
         {
-            //Debug.LogWarning("hello");
-            __instance.hive.grabbableToEnemies = false;
+            if (!hiveMoons.Contains(RoundManager.Instance.currentLevel.sceneName) && !configLootBugHives.Value) //So Wesley can have aggressive loot bugs on Hyve.
+            {
+                Debug.LogWarning($"Making this hive ungrabbable by enemies");
+                __instance.hive.grabbableToEnemies = false;
+            }
+            /*if (RoundManager.Instance.currentLevel.sceneName != "Asteroid14Scene") //So Wesley can have aggressive loot bugs on Hyve.
+            {
+                __instance.hive.grabbableToEnemies = false;
+            }*/
         }
 
         //====================================================================================================================================================================================
@@ -471,6 +479,16 @@ namespace StarlancerAIFix.Patches
                     return 1f;
                 }
                 return visibility;
+            }
+
+            GrabbableObject IVisibleThreat.GetHeldObject()
+            {
+                return null;
+            }
+
+            bool IVisibleThreat.IsThreatDead()
+            {
+                return thisEnemy.isEnemyDead;
             }
         }
         
