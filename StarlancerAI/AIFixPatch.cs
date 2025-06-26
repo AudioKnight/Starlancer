@@ -24,7 +24,7 @@ namespace StarlancerAIFix.Patches
                 outsideAINodes = GameObject.FindGameObjectsWithTag("OutsideAINode");
                 logger.LogInfo("Finding outside AI nodes.");
                 outsideNodePositions = new Vector3[outsideAINodes.Length];
-                
+
                 for (int i = 0; i < outsideAINodes.Length; i++)
                 {
                     outsideNodePositions[i] = outsideAINodes[i].transform.position;
@@ -331,11 +331,11 @@ namespace StarlancerAIFix.Patches
                     }
                     break;
             }
-            
+
         }
 
         //====================================================================================================================================================================================
-        
+
         [HarmonyPatch(typeof(RedLocustBees), "Start")]
         [HarmonyPostfix]
 
@@ -346,10 +346,6 @@ namespace StarlancerAIFix.Patches
                 Debug.LogWarning($"Making this hive ungrabbable by enemies");
                 __instance.hive.grabbableToEnemies = false;
             }
-            /*if (RoundManager.Instance.currentLevel.sceneName != "Asteroid14Scene") //So Wesley can have aggressive loot bugs on Hyve.
-            {
-                __instance.hive.grabbableToEnemies = false;
-            }*/
         }
 
         //====================================================================================================================================================================================
@@ -433,7 +429,7 @@ namespace StarlancerAIFix.Patches
             public Transform enemyTransform;
             public NavMeshAgent agent;
             public Vector3 agentLocalVelocity;
-            public ThreatType Generic = ThreatType.BaboonHawk; //Must not be null. Enemies looking into ThreatType gets NullReferenceException. Put BaboonHawk as a temporary solution.
+            public ThreatType Generic = ThreatType.BushWolf; //Fandovec03: Must not be null. Enemies looking into ThreatType gets NullReferenceException. Put BaboonHawk as a temporary solution. | Starlancer: Swapped to BushWolf at Fandovec03's suggestion, as it is unused and shouldn't cause any issues.
 
             ThreatType IVisibleThreat.type => Generic;
 
@@ -479,7 +475,7 @@ namespace StarlancerAIFix.Patches
                 }
                 else
                 {
-                    visibility = 1f; //Visibility should not be based on velocity
+                    visibility = 1f; //Fandovec03: Visibility should not be based on velocity
                 }
                 return visibility;
             }
@@ -489,7 +485,7 @@ namespace StarlancerAIFix.Patches
                 if (thisEnemy is HoarderBugAI)
                 {
                     if ((thisEnemy as HoarderBugAI).heldItem == null) return null;
-                    else return (thisEnemy as HoarderBugAI).heldItem.itemGrabbableObject; // Allows enemies through IVisibleThreat what item is Hoarding bug holding.
+                    else return (thisEnemy as HoarderBugAI).heldItem.itemGrabbableObject; //Fandovec03: Allows enemies through IVisibleThreat what item is Hoarding bug holding.
                 }
                 return null;
             }
@@ -502,7 +498,7 @@ namespace StarlancerAIFix.Patches
 
         //====================================================================================================================================================================================
 
-        [HarmonyPatch(typeof(EnemyAI), "Start")] // Adds a dummy collider so enemies using OverlapSpheres for LOS can see the enemy
+        [HarmonyPatch(typeof(EnemyAI), "Start")] //Fandovec03: Adds a dummy collider so enemies using OverlapSpheres for LOS can see the enemy
         [HarmonyPostfix]
 
         private static void DummyCollider(EnemyAI __instance)
