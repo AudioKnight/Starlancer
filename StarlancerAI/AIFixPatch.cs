@@ -2,6 +2,9 @@
 using HarmonyLib;
 using static StarlancerAIFix.StarlancerAIFixBase;
 using UnityEngine.AI;
+using System.Linq;
+using System.Collections.Generic;
+using System;
 
 namespace StarlancerAIFix.Patches
 {
@@ -21,7 +24,7 @@ namespace StarlancerAIFix.Patches
                 outsideAINodes = GameObject.FindGameObjectsWithTag("OutsideAINode");
                 logger.LogInfo("Finding outside AI nodes.");
                 outsideNodePositions = new Vector3[outsideAINodes.Length];
-                
+
                 for (int i = 0; i < outsideAINodes.Length; i++)
                 {
                     outsideNodePositions[i] = outsideAINodes[i].transform.position;
@@ -328,11 +331,11 @@ namespace StarlancerAIFix.Patches
                     }
                     break;
             }
-            
+
         }
 
         //====================================================================================================================================================================================
-        
+
         [HarmonyPatch(typeof(RedLocustBees), "Start")]
         [HarmonyPostfix]
 
@@ -343,10 +346,6 @@ namespace StarlancerAIFix.Patches
                 Debug.LogWarning($"Making this hive ungrabbable by enemies");
                 __instance.hive.grabbableToEnemies = false;
             }
-            /*if (RoundManager.Instance.currentLevel.sceneName != "Asteroid14Scene") //So Wesley can have aggressive loot bugs on Hyve.
-            {
-                __instance.hive.grabbableToEnemies = false;
-            }*/
         }
 
         //====================================================================================================================================================================================
@@ -430,7 +429,7 @@ namespace StarlancerAIFix.Patches
             public Transform enemyTransform;
             public NavMeshAgent agent;
             public Vector3 agentLocalVelocity;
-            public ThreatType Generic;
+            public ThreatType Generic = ThreatType.BushWolf; //Fandovec03: Must not be null. Enemies looking into ThreatType gets NullReferenceException. Put BaboonHawk as a temporary solution. | Starlancer: Swapped to BushWolf at Fandovec03's suggestion, as it is unused and shouldn't cause any issues.
 
             ThreatType IVisibleThreat.type => Generic;
 
@@ -474,15 +473,20 @@ namespace StarlancerAIFix.Patches
                 {
                     return 0f;
                 }
-                if (agent.velocity.sqrMagnitude > 0f)
+                else
                 {
-                    return 1f;
+                    visibility = 1f; //Fandovec03: Visibility should not be based on velocity
                 }
                 return visibility;
             }
 
             GrabbableObject IVisibleThreat.GetHeldObject()
             {
+                if (thisEnemy is HoarderBugAI)
+                {
+                    if ((thisEnemy as HoarderBugAI).heldItem == null) return null;
+                    else return (thisEnemy as HoarderBugAI).heldItem.itemGrabbableObject; //Fandovec03: Allows enemies through IVisibleThreat what item is Hoarding bug holding.
+                }
                 return null;
             }
 
@@ -491,7 +495,23 @@ namespace StarlancerAIFix.Patches
                 return thisEnemy.isEnemyDead;
             }
         }
-        
+
+        //====================================================================================================================================================================================
+
+        [HarmonyPatch(typeof(EnemyAI), "Start")] //Fandovec03: Adds a dummy collider so enemies using OverlapSpheres for LOS can see the enemy
+        [HarmonyPostfix]
+
+        private static void DummyCollider(EnemyAI __instance)
+        {
+            BoxCollider collider = __instance.gameObject.GetComponent<BoxCollider>();
+            if (collider == null)
+            {
+                collider = __instance.gameObject.AddComponent<BoxCollider>();
+                collider.isTrigger = true;
+                collider.enabled = true;
+                collider.size = Vector3.zero;
+            }
+        }
 
         //====================================================================================================================================================================================
 

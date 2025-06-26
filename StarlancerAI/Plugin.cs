@@ -12,7 +12,7 @@ namespace StarlancerAIFix
     {
         private const string modGUID = "AudioKnight.StarlancerAIFix";
         private const string modName = "Starlancer AI Fix";
-        private const string modVersion = "3.10.0";
+        private const string modVersion = "3.11.0";
 
         private readonly Harmony harmony = new Harmony(modGUID);
 
