@@ -2,6 +2,9 @@
 using HarmonyLib;
 using static StarlancerAIFix.StarlancerAIFixBase;
 using UnityEngine.AI;
+using System.Linq;
+using System.Collections.Generic;
+using System;
 
 namespace StarlancerAIFix.Patches
 {
@@ -430,7 +433,7 @@ namespace StarlancerAIFix.Patches
             public Transform enemyTransform;
             public NavMeshAgent agent;
             public Vector3 agentLocalVelocity;
-            public ThreatType Generic;
+            public ThreatType Generic = ThreatType.BaboonHawk; //Must not be null. Enemies looking into ThreatType gets NullReferenceException. Put BaboonHawk as a temporary solution.
 
             ThreatType IVisibleThreat.type => Generic;
 
@@ -474,15 +477,20 @@ namespace StarlancerAIFix.Patches
                 {
                     return 0f;
                 }
-                if (agent.velocity.sqrMagnitude > 0f)
+                else
                 {
-                    return 1f;
+                    visibility = 1f; //Visibility should not be based on velocity
                 }
                 return visibility;
             }
 
             GrabbableObject IVisibleThreat.GetHeldObject()
             {
+                if (thisEnemy is HoarderBugAI)
+                {
+                    if ((thisEnemy as HoarderBugAI).heldItem == null) return null;
+                    else return (thisEnemy as HoarderBugAI).heldItem.itemGrabbableObject; // Allows enemies through IVisibleThreat what item is Hoarding bug holding.
+                }
                 return null;
             }
 
@@ -491,7 +499,23 @@ namespace StarlancerAIFix.Patches
                 return thisEnemy.isEnemyDead;
             }
         }
-        
+
+        //====================================================================================================================================================================================
+
+        [HarmonyPatch(typeof(EnemyAI), "Start")] // Adds a dummy collider so enemies using OverlapSpheres for LOS can see the enemy
+        [HarmonyPostfix]
+
+        private static void DummyCollider(EnemyAI __instance)
+        {
+            BoxCollider collider = __instance.gameObject.GetComponent<BoxCollider>();
+            if (collider == null)
+            {
+                collider = __instance.gameObject.AddComponent<BoxCollider>();
+                collider.isTrigger = true;
+                collider.enabled = true;
+                collider.size = Vector3.zero;
+            }
+        }
 
         //====================================================================================================================================================================================
 
