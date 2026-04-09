@@ -2,9 +2,6 @@
 using HarmonyLib;
 using static StarlancerAIFix.StarlancerAIFixBase;
 using UnityEngine.AI;
-using System.Linq;
-using System.Collections.Generic;
-using System;
 
 namespace StarlancerAIFix.Patches
 {
@@ -331,7 +328,10 @@ namespace StarlancerAIFix.Patches
                     }
                     break;
             }
-
+            if ((__instance.isEnemyDead || StartOfRound.Instance.shipIsLeaving) && __instance.startedMurderMusic) //Stops the murder music from playing when a Butler dies or the players leave
+            {
+                __instance.startedMurderMusic = false;
+            }
         }
 
         //====================================================================================================================================================================================
@@ -428,8 +428,10 @@ namespace StarlancerAIFix.Patches
             public int interestLevel;
             public Transform enemyTransform;
             public NavMeshAgent agent;
-            public Vector3 agentLocalVelocity;
-            public ThreatType Generic = ThreatType.BushWolf; //Fandovec03: Must not be null. Enemies looking into ThreatType gets NullReferenceException. Put BaboonHawk as a temporary solution. | Starlancer: Swapped to BushWolf at Fandovec03's suggestion, as it is unused and shouldn't cause any issues.
+            //public Vector3 agentLocalVelocity;
+            public ThreatType Generic = ThreatType.BaboonHawk; //Fandovec03: Must not be null. Enemies looking into ThreatType gets NullReferenceException. Put BaboonHawk as a temporary solution.
+                                                               //Starlancer: Swapped to BushWolf at Fandovec03's suggestion, as it is unused and shouldn't cause any issues.
+                                                               //Starlancer (04/08/2026): Swapped from BushWolf back to BaboonHawk.
 
             ThreatType IVisibleThreat.type => Generic;
 
@@ -484,8 +486,8 @@ namespace StarlancerAIFix.Patches
             {
                 if (thisEnemy is HoarderBugAI)
                 {
-                    if ((thisEnemy as HoarderBugAI).heldItem == null) return null;
-                    else return (thisEnemy as HoarderBugAI).heldItem.itemGrabbableObject; //Fandovec03: Allows enemies through IVisibleThreat what item is Hoarding bug holding.
+                    if (((HoarderBugAI)thisEnemy).heldItem == null) return null;
+                    else return ((HoarderBugAI)thisEnemy).heldItem.itemGrabbableObject; //Fandovec03: Allows enemies through IVisibleThreat what item is Hoarding bug holding.
                 }
                 return null;
             }
