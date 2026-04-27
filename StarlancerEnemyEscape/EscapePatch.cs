@@ -69,7 +69,7 @@ namespace EnemyEscape
             exteriorPathRange = configEscapeExteriorRange[enemy.enemyType.enemyName].Value;
             pathCooldownTime = configEscapeCooldownTime[enemy.enemyType.enemyName].Value;
 
-            logger.LogInfo($"Adding EscapeComponent to {enemy.gameObject.name}. It may now roam freely.");
+            logger.LogDebug($"Adding EscapeComponent to {enemy.gameObject.name}. It may now roam freely.");
 
             if (EnemyEscapeConfigDictionary[enemy.enemyType.enemyName].Value == -1)
             {
@@ -82,7 +82,7 @@ namespace EnemyEscape
 
             if (chanceToEscape == 0)
             {
-                logger.LogInfo($"ChanceToEscape is 0, removing EscapeComponent from {gameObject.name}");
+                logger.LogDebug($"ChanceToEscape is 0, removing EscapeComponent from {gameObject.name}");
                 Destroy(this);
             }
             else
@@ -126,7 +126,6 @@ namespace EnemyEscape
             if ((Time.time - lastPathAttempt) > pathCooldownTime || pathingToTeleport) //Attempt to path to a nearby entrance.
             {
                 //=========== EnemyType Specific ============
-
                 if (enemy is HoarderBugAI hoarderBugAI) //Prevents random pathing when holding an item so it doesn't get confused.
                 {
                     if (hoarderBugAI.heldItem != null)
@@ -147,6 +146,15 @@ namespace EnemyEscape
                     }
                     else { preventPathing = false; }
                 }
+                /*else if (enemy is GiantKiwiAI kiwiAI)
+                {
+                    if (kiwiAI.creatureAnimator.GetBool("Asleep")) //Prevents random pathing while sleeping.
+                    {
+                        pathingToTeleport = false;
+                        preventPathing = true;
+                    }
+                    else { preventPathing = false; }
+                }*/
 
                 //===========================================
 
@@ -217,7 +225,6 @@ namespace EnemyEscape
                         {
                             baboonBirdLeaveGroup.LeaveCurrentScoutingGroup(true);
                         }
-
                     }
                 }
                 lastPathAttempt = Time.time;
@@ -273,7 +280,7 @@ namespace EnemyEscape
                 else if (insideTeleports[closestTeleport.entranceId].entrancePoint == null) { logger.LogError($"insideTeleports[closestTeleport.entranceId].entrancePoint is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }
                 else if (insideTeleports[closestTeleport.entranceId].entrancePoint.position == null) { logger.LogError($"insideTeleports[closestTeleport.entranceId].entrancePoint.position is null, aborting warp. Interior is {RoundManager.Instance.dungeonGenerator.Generator.DungeonFlow.name}. Please report this error to the author of this interior."); return; }*/
                 
-                logger.LogInfo($"Warping {enemy.name} inside.");
+                logger.LogDebug($"Warping {enemy.name} inside.");
                 enemy.agent.Warp(insideTeleports[closestTeleport.entranceId].entrancePoint.position);
                 enemy.SetEnemyOutside(false);
                 pathRange = interiorPathRange;
@@ -287,7 +294,7 @@ namespace EnemyEscape
                 else if (outsideTeleports[closestTeleport.entranceId].entrancePoint == null) { logger.LogError($"outsideTeleports[closestTeleport.entranceId].entrancePoint is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }
                 else if (outsideTeleports[closestTeleport.entranceId].entrancePoint.position == null) { logger.LogError($"outsideTeleports[closestTeleport.entranceId].entrancePoint.position is null, aborting warp. Moon is {RoundManager.Instance.currentLevel.PlanetName}. Please report this error to the author of this moon."); return; }*/
 
-                logger.LogInfo($"Warping {enemy.name} outside.");
+                logger.LogDebug($"Warping {enemy.name} outside.");
                 enemy.agent.Warp(outsideTeleports[closestTeleport.entranceId].entrancePoint.position);
                 enemy.SetEnemyOutside(true);
                 pathRange = exteriorPathRange;
@@ -322,6 +329,7 @@ namespace EnemyEscape
             randomEnemyDestination = enemy.allAINodes[random.Next(0, enemy.allAINodes.Length - 1)].transform.position;
             enemy.SetDestinationToPosition(randomEnemyDestination);
             enemy.agent.SetDestination(randomEnemyDestination);
+            enemy.StopSearch(enemy.currentSearch);
             enemy.DoAIInterval();
 
             //=========== EnemyType Specific ============
@@ -377,7 +385,7 @@ namespace EnemyEscape
                 //Vanilla Enemy Binding
                 if (VanillaEnemyList.ContainsKey(__instance.enemyType.enemyName))
                 {
-                    logger.LogInfo($"Adding {__instance.enemyType.enemyName} to the StarlancerEnemyEscape config.");
+                    logger.LogDebug($"Adding {__instance.enemyType.enemyName} to the StarlancerEnemyEscape config.");
                     EnemyEscapeConfigDictionary[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Vanilla Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")}", -1,
                         new ConfigDescription($"Chance for {__instance.enemyType.enemyName} to go into or out of the facility. Set to -1 to use the value from the chosen preset.",
                         new AcceptableValueRange<int>(-1, 100)));logger.LogInfo($"Adding {__instance.enemyType.enemyName} to the StarlancerEnemyEscape config.");
@@ -394,7 +402,7 @@ namespace EnemyEscape
                 else
                 //Mod Enemy Binding
                 {
-                    logger.LogInfo($"Adding {__instance.enemyType.enemyName} to the StarlancerEnemyEscape config.");
+                    logger.LogDebug($"Adding {__instance.enemyType.enemyName} to the StarlancerEnemyEscape config.");
                     EnemyEscapeConfigDictionary[__instance.enemyType.enemyName] = EnemyEscapeConfig.Bind("Mod Enemies", $"{__instance.enemyType.enemyName.Replace("=", "").Replace("\n", "").Replace("\t", "").Replace("\\", "").Replace("\"", "").Replace("\'", "").Replace("[", "").Replace("]", "")}", -1,
                         new ConfigDescription($"Chance for {__instance.enemyType.enemyName} to go into or out of the facility. Set to -1 to use the value from the chosen preset.",
                         new AcceptableValueRange<int>(20, 100)));
@@ -517,7 +525,7 @@ namespace EnemyEscape
 
                     outsideTeleports.Add(entranceTeleports[i]);
                     outsideTeleports.Sort((entranceA, entranceB) => entranceA.entranceId.CompareTo(entranceB.entranceId));
-                    logger.LogInfo($"Registering exterior EntranceTeleport({entranceID}).");
+                    logger.LogDebug($"Registering exterior EntranceTeleport({entranceID}).");
                 }
                 else
                 {
@@ -536,7 +544,7 @@ namespace EnemyEscape
 
                     insideTeleports.Add(entranceTeleports[i]);
                     insideTeleports.Sort((entranceA, entranceB) => entranceA.entranceId.CompareTo(entranceB.entranceId));
-                    logger.LogInfo($"Registering interior EntranceTeleport({entranceID}).");
+                    logger.LogDebug($"Registering interior EntranceTeleport({entranceID}).");
 
                 }
             }

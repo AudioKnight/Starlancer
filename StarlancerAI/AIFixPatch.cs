@@ -430,33 +430,32 @@ namespace StarlancerAIFix.Patches
 
         //====================================================================================================================================================================================
 
-        /*[HarmonyPatch(typeof(CadaverGrowthAI), "GrowInTiles")]
+        /*[HarmonyPatch(typeof(PumaAI), nameof(PumaAI.Start))]    //Keeping this here for later. This instantiates fake, invisible trees that the Puma can climb.
         [HarmonyPostfix]
-        private static void CadaverPatch(CadaverGrowthAI __instance)
+
+        private static void PumaInsidePatch(PumaAI __instance, ref List<GameObject> ___AllTreeNodes)
         {
-            System.Random random = new System.Random(StartOfRound.Instance.randomMapSeed);
-            List<Vector3> outsideNodeList = outsideNodePositions.ToList();
-
-            if (__instance.isOutside)
+            if (!__instance.isOutside)
             {
-                BatchAllMeshChildren[] allMeshChildren = __instance.gameObject.GetComponents<BatchAllMeshChildren>();
-
-                for (int i = 0; i < allMeshChildren.Length; i++)
+                ___AllTreeNodes = new List<GameObject>();
+                GameObject empty = new GameObject();
+                for (int i = 0; i < insideAINodes.Length; i++)
                 {
-                    allMeshChildren[i].transform.position = outsideAINodes[random.Next(0, outsideAINodes.Length)].transform.position;
+                    ___AllTreeNodes.Add(GameObject.Instantiate(empty));
+                    ___AllTreeNodes[i].transform.position = insideAINodes[i].transform.position;
+                    ___AllTreeNodes[i].tag = "Tree";
+                    ___AllTreeNodes[i].name = "Tree";
+                    ___AllTreeNodes[i].layer = 25;
+                    ___AllTreeNodes[i].AddComponent<CapsuleCollider>().height = 13;
+                    ___AllTreeNodes[i].GetComponent<CapsuleCollider>().radius = 0.45f;
+                    ___AllTreeNodes[i].GetComponent<CapsuleCollider>().center = new Vector3(0f, 5.88f, 0f);
+                    ___AllTreeNodes[i].GetComponent<CapsuleCollider>().isTrigger = false;
                 }
-                logger.LogInfo("Doing a thing.");
-
-
-
-                //__instance.gameObject.transform.position = __instance.favoriteSpot.transform.position;
-                //RoundManager.Instance.GetRandomNavMeshPositionInBoxPredictable(GrowthTiles[i].tile.Bounds.center, GrowthTiles[i].tile.Bounds.extents.x * 2f, default(NavMeshHit), growthRandom) : transform.position);
-                //__instance.CadaverSporesParticle.transform.position = __instance.favoriteSpot.transform.position;
             }
         }*/
 
-
         //====================================================================================================================================================================================
+
         internal class ThreatComponent : MonoBehaviour, IVisibleThreat //A dummy IVisibleThreat component to allow enemies like the RadMech to target interior enemies like the Bracken.
         {
             public EnemyAI thisEnemy;
