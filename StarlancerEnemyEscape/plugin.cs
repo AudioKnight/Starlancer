@@ -13,7 +13,7 @@ namespace StarlancerEnemyEscape
     {
         private const string modGUID = "AudioKnight.StarlancerEnemyEscape";
         private const string modName = "Starlancer EnemyEscape";
-        private const string modVersion = "2.5.6";
+        private const string modVersion = "3.0.0";
 
         private readonly Harmony harmony = new Harmony(modGUID);
         public static StarlancerEnemyEscapeBase Instance;
@@ -49,7 +49,7 @@ namespace StarlancerEnemyEscape
             logger.LogInfo("Starlancer is allowing enemies to roam.");
 
             configEscapePreset = Config.Bind("EnemyEscape", "EscapePreset", ConfigPreset.ReasonableDefaults, new ConfigDescription("Which preset to use. If an enemy has a value manually set below, it will take priority." +
-                "\nReasonableDefaults: Blob:2, Bunker Spider:10, Butler:5, Butler Bees:5, Centipede:0, Crawler:10, Flowerman:10, Hoarding bug:10, Jester:1, Nutcracker:5, Puffer:10, Spring:5, Baboon hawk:15, Earth Leviathan:1, ForestGiant:0, MouthDog:0, RadMech:0, Tulip Snake:5, Clay Surgeon:5, Maneater:1" +
+                "\nReasonableDefaults: Blob:2, Bunker Spider:10, Butler:5, Butler Bees:5, Centipede:0, Crawler:10, Flowerman:10, Hoarding bug:10, Jester:1, Nutcracker:5, Puffer:10, Spring:5, Baboon hawk:15, Earth Leviathan:1, ForestGiant:0, MouthDog:0, RadMech:0, Tulip Snake:5, Clay Surgeon:5, Maneater:1, Cadaver Bloom:8" +
                 "\nDisabled: All 0s, Minimal: All 1s, Chaos: All 100s (Use at your own risk)"));
 
             harmony.PatchAll(typeof(StarlancerEnemyEscapeBase));
@@ -90,14 +90,18 @@ namespace StarlancerEnemyEscape
         //================= Predefined Dictionaries =================
 
         internal static Dictionary<string, string> EnemyBlacklist = new Dictionary<string, string>  {
-            { "Girl", "Unneeded"},
-            { "Masked", "Unneeded"},
-            //{ "Tulip Snake", "Unneeded"}, Re-implementing as of 09-06-2024
-            { "Docile Locust Bees", "Unneeded"},
-            { "Manticoil", "Unneeded"},
-            { "Lasso", "Unimplemented"},
-            { "Red pill", "Unimplemented"},
-            { "Red Locust Bees", "Buggy"}, //I'll revisit these bees later
+            { "Girl", "Unneeded" },
+            { "Masked", "Unneeded" },
+            { "Docile Locust Bees", "Unneeded" },
+            { "Manticoil", "Unneeded" },
+            { "Lasso", "Unimplemented" },
+            { "Red pill", "Unimplemented" },
+            { "Red Locust Bees", "Buggy" },
+            { "Cadaver Growths", "Unneeded" },
+            { "GiantKiwi", "Buggy" },
+            { "Stingray", "Buggy" },
+            { "Bush Wolf", "Buggy" },
+            { "Feiopar", "Buggy" },
         };
 
         internal static Dictionary<string, string> VanillaEnemyList = new Dictionary<string, string>  {
@@ -118,11 +122,10 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", "" },
             { "MouthDog", "" },
             { "RadMech", "" },
-            //{ "Red Locust Bees", "" },
-            { "Tulip Snake", ""},
-            //{ "Bush Wolf", ""}, Zeekers removed the Kidnapper Fox, so disabling this for now as of 09-06-2024
-            { "Clay Surgeon", ""},
-            { "Maneater", ""}, //New as of 09-06-2024
+            { "Tulip Snake", "" },
+            { "Clay Surgeon", "" },
+            { "Maneater", "" },
+            { "Cadaver Bloom", "" },
         };
 
         internal static Dictionary<string, int> DefaultPresetValues = new Dictionary<string, int>  {
@@ -143,11 +146,10 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", 0 },
             { "MouthDog", 0 },
             { "RadMech", 0 },
-            //{ "Red Locust Bees", 5 },
-            { "Tulip Snake", 5},
-            //{ "Bush Wolf", 5}, Zeekers removed the Kidnapper Fox, so disabling this for now as of 09-06-2024
-            { "Clay Surgeon", 5},
-            { "Maneater", 1}, //New as of 09-06-2024
+            { "Tulip Snake", 5 },
+            { "Clay Surgeon", 5 },
+            { "Maneater", 1 },
+            { "Cadaver Bloom", 8 },
         };
 
         internal static Dictionary<string, int> DisabledPresetValues = new Dictionary<string, int>  {
@@ -168,11 +170,10 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", 0 },
             { "MouthDog", 0 },
             { "RadMech", 0 },
-            //{ "Red Locust Bees", 0 },
-            { "Tulip Snake", 0},
-            //{ "Bush Wolf", 0}, Zeekers removed the Kidnapper Fox, so disabling this for now as of 09-06-2024
-            { "Clay Surgeon", 0},
-            { "Maneater", 0}, //New as of 09-06-2024
+            { "Tulip Snake", 0 },
+            { "Clay Surgeon", 0 },
+            { "Maneater", 0 },
+            { "Cadaver Bloom", 0 },
         };
 
         internal static Dictionary<string, int> MinimalPresetValues = new Dictionary<string, int>  {
@@ -193,11 +194,10 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", 1 },
             { "MouthDog", 1 },
             { "RadMech", 1 },
-            //{ "Red Locust Bees", 1 },
-            { "Tulip Snake", 1},
-            //{ "Bush Wolf", 1}, Zeekers removed the Kidnapper Fox, so disabling this for now as of 09-06-2024
-            { "Clay Surgeon", 1},
-            { "Maneater", 1}, //New as of 09-06-2024
+            { "Tulip Snake", 1 },
+            { "Clay Surgeon", 1 },
+            { "Maneater", 1 },
+            { "Cadaver Bloom", 1 },
         };
 
         internal static Dictionary<string, int> ChaosPresetValues = new Dictionary<string, int>  {
@@ -218,11 +218,10 @@ namespace StarlancerEnemyEscape
             { "ForestGiant", 100 },
             { "MouthDog", 100 },
             { "RadMech", 100 },
-            //{ "Red Locust Bees", 100 },
-            { "Tulip Snake", 100},
-            //{ "Bush Wolf", 100}, Zeekers removed the Kidnapper Fox, so disabling this for now as of 09-06-2024
-            { "Clay Surgeon", 100},
-            { "Maneater", 100}, //New as of 09-06-2024
+            { "Tulip Snake", 100 },
+            { "Clay Surgeon", 100 },
+            { "Maneater", 100 },
+            { "Cadaver Bloom", 100 },
         };
     }
 }
